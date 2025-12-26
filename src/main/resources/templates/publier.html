@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+<head>
+    <title>Publier une carte trouvée</title>
+
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-header i {
+            font-size: 3rem;
+            color: var(--primary-color);
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--danger-color);
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .image-preview {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-preview:hover {
+            border-color: var(--primary-color);
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 5px;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #adb5bd;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <div class="container py-5">
+        <div class="form-container">
+            <div class="form-header">
+                <i class="bi bi-plus-circle"></i>
+                <h2 class="mt-3">Publier une carte trouvée</h2>
+                <p class="text-muted">
+                    Remplissez ce formulaire pour aider à restituer une carte perdue
+                </p>
+            </div>
+
+            <form th:action="@{/publier}" method="post" enctype="multipart/form-data"
+                  th:object="${carteDTO}" novalidate>
+
+                <!-- Type de carte -->
+                <div class="mb-4">
+                    <label for="typeCarte" class="form-label required">
+                        <i class="bi bi-card-heading me-2"></i>Type de carte
+                    </label>
+                    <select class="form-select" id="typeCarte" th:field="*{typeCarte}" required>
+                        <option value="">Sélectionnez le type de carte</option>
+                        <option th:each="type : ${typesCarte}"
+                                th:value="${type}"
+                                th:text="${type}"></option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('typeCarte')}">
+                        Veuillez sélectionner le type de carte
+                    </div>
+                </div>
+
+                <!-- Nom complet -->
+                <div class="mb-4">
+                    <label for="nomComplet" class="form-label required">
+                        <i class="bi bi-person me-2"></i>Nom complet sur la carte
+                    </label>
+                    <input type="text" class="form-control" id="nomComplet"
+                           th:field="*{nomComplet}"
+                           placeholder="Ex: Mamadou Diallo" required>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('nomComplet')}">
+                        Le nom complet est requis (3-100 caractères)
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Numéro de carte (optionnel) -->
+                    <div class="col-md-6 mb-4">
+                        <label for="numeroCarte" class="form-label">
+                            <i class="bi bi-123 me-2"></i>Numéro de carte (optionnel)
+                        </label>
+                        <input type="text" class="form-control" id="numeroCarte"
+                               th:field="*{numeroCarte}"
+                               placeholder="Ex: AB123456">
+                    </div>
+
+                    <!-- Date de naissance (optionnel) -->
+                    <div class="col-md-6 mb-4">
+                        <label for="dateNaissance" class="form-label">
+                            <i class="bi bi-calendar me-2"></i>Date de naissance (optionnel)
+                        </label>
+                        <input type="date" class="form-control" id="dateNaissance"
+                               th:field="*{dateNaissance}">
+                    </div>
+                </div>
+
+                <!-- Lieu trouvé -->
+                <div class="mb-4">
+                    <label for="lieuTrouve" class="form-label required">
+                        <i class="bi bi-geo-alt me-2"></i>Lieu où la carte a été trouvée
+                    </label>
+                    <input type="text" class="form-control" id="lieuTrouve"
+                           th:field="*{lieuTrouve}"
+                           placeholder="Ex: Marché Sandaga, Dakar" required>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('lieuTrouve')}">
+                        Le lieu est requis (3-200 caractères)
+                    </div>
+                </div>
+
+                <!-- Téléphone du ramasseur -->
+                <div class="mb-4">
+                    <label for="telephoneRamasseur" class="form-label required">
+                        <i class="bi bi-telephone me-2"></i>Votre numéro de téléphone
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">+221</span>
+                        <input type="tel" class="form-control" id="telephoneRamasseur"
+                               th:field="*{telephoneRamasseur}"
+                               placeholder="771234567" required
+                               pattern="^(77|76|78|70|75)\d{7}$">
+                    </div>
+                    <small class="form-text text-muted">
+                        Format: 77xxxxxxx, 76xxxxxxx, 78xxxxxxx
+                    </small>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('telephoneRamasseur')}">
+                        Numéro de téléphone sénégalais invalide
+                    </div>
+                </div>
+
+                <!-- Image (optionnel) -->
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="bi bi-image me-2"></i>Photo de la carte (optionnel)
+                    </label>
+                    <div class="image-preview" onclick="document.getElementById('imageFile').click()">
+                        <div th:if="${carteDTO.imageFile != null and carteDTO.imageFile.size > 0}">
+                            <img th:src="'data:image/jpeg;base64,' + ${carteDTO.imageFile}"
+                                 class="preview-image" id="preview">
+                            <p class="mt-2 text-muted">Cliquez pour changer</p>
+                        </div>
+                        <div th:unless="${carteDTO.imageFile != null and carteDTO.imageFile.size > 0}">
+                            <i class="bi bi-cloud-upload upload-icon"></i>
+                            <p class="mt-2">Cliquez pour télécharger une image</p>
+                            <small class="text-muted">JPG, PNG (max 5MB)</small>
+                        </div>
+                    </div>
+                    <input type="file" class="form-control d-none" id="imageFile"
+                           th:field="*{imageFile}" accept="image/*"
+                           onchange="previewImage(event)">
+                </div>
+
+                <!-- Boutons -->
+                <div class="d-flex justify-content-between mt-5">
+                    <a th:href="@{/}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-send"></i> Publier la carte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+    function previewImage(event) {
+        const input = event.target;
+        const preview = document.getElementById('preview');
+        const previewContainer = document.querySelector('.image-preview');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                if (preview) {
+                    preview.src = e.target.result;
+                } else {
+                    previewContainer.innerHTML = `
+                            <div>
+                                <img src="${e.target.result}" class="preview-image">
+                                <p class="mt-2 text-muted">Cliquez pour changer</p>
+                            </div>
+                        `;
+                }
+            }
+
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Validation du formulaire
+    (function() {
+        'use strict'
+
+        var forms = document.querySelectorAll('.needs-validation')
+
+        Array.prototype.slice.call(forms)
+            .forEach(function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+</body>
+</html>

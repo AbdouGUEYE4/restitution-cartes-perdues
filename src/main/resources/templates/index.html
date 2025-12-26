@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+<head>
+    <title>Rechercher une carte perdue</title>
+
+    <style>
+        .search-box {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .card-text {
+            color: #666;
+        }
+
+        .badge-type {
+            background-color: #e3f2fd;
+            color: var(--primary-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #dee2e6;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold mb-4">
+                <i class="bi bi-search me-3"></i>Retrouvez vos documents perdus
+            </h1>
+            <p class="lead mb-4">
+                Plateforme sécurisée pour la recherche et restitution des cartes d'identité,
+                permis, cartes scolaires et autres documents perdus au Sénégal.
+            </p>
+            <a th:href="@{/publier}" class="btn btn-light btn-lg">
+                <i class="bi bi-plus-circle"></i> Publier une carte trouvée
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulaire de Recherche -->
+    <div class="container">
+        <div class="search-box mb-5">
+            <h3 class="mb-4">
+                <i class="bi bi-search me-2"></i>Rechercher une carte
+            </h3>
+            <form th:action="@{/}" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control form-control-lg"
+                           name="keyword" placeholder="Nom sur la carte..."
+                           th:value="${rechercheDTO.keyword}">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-lg" name="typeCarte">
+                        <option value="">Type de carte</option>
+                        <option th:each="type : ${typesCarte}"
+                                th:value="${type}"
+                                th:text="${type}"
+                                th:selected="${rechercheDTO.typeCarte == type}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control form-control-lg"
+                           name="lieu" placeholder="Lieu trouvé..."
+                           th:value="${rechercheDTO.lieu}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-search"></i> Rechercher
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Liste des Cartes -->
+        <h3 class="mb-4">
+            <i class="bi bi-card-checklist me-2"></i>
+            Cartes récemment trouvées
+            <span class="badge bg-primary ms-2" th:text="${cartes.size()}"></span>
+        </h3>
+
+        <div th:if="${cartes.empty}">
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <h4 class="mt-3">Aucune carte trouvée</h4>
+                <p class="text-muted">
+                    Aucune carte ne correspond à votre recherche.
+                    Essayez avec d'autres critères ou
+                    <a th:href="@{/publier}">publiez une carte</a> que vous avez trouvée.
+                </p>
+            </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" th:if="${!cartes.empty}">
+            <div class="col" th:each="carte : ${cartes}">
+                <div class="card h-100">
+                    <div th:if="${carte.imageUrl}" class="position-relative">
+                        <img th:src="@{'/uploads/cartes/' + ${carte.imageUrl}}"
+                             class="card-img-top" alt="Image de la carte">
+                        <span class="badge bg-primary position-absolute top-0 end-0 m-2">
+                                <i class="bi bi-card-image"></i>
+                            </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title" th:text="${carte.nomComplet}"></h5>
+                            <span class="badge badge-type" th:text="${carte.typeCarte}"></span>
+                        </div>
+                        <p class="card-text">
+                            <i class="bi bi-geo-alt text-primary"></i>
+                            <span th:text="${carte.lieuTrouve}"></span>
+                        </p>
+                        <p class="card-text">
+                            <i class="bi bi-calendar text-primary"></i>
+                            <small class="text-muted">
+                                Trouvée le
+                                <span th:text="${#dates.format(carte.datePublication, 'dd/MM/yyyy')}"></span>
+                            </small>
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-outline-primary btn-sm"
+                                    onclick="togglePhoneNumber([[${carte.id}]])"
+                                    id="btn-[[${carte.id}]]">
+                                <i class="bi bi-telephone"></i> Contacter
+                            </button>
+                            <a th:href="@{'/cartes/' + ${carte.id}}" class="btn btn-link">
+                                Voir détails <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <small class="text-muted">
+                            <i class="bi bi-telephone"></i>
+                            <span id="phone-[[${carte.id}]]">
+                                    [[${carteService.masquerTelephone(carte.telephoneRamasseur)}]]
+                                </span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="row mt-5">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Cartes publiées</h6>
+                        <h4 class="card-title text-primary">[[${stats.cartesValidees}]]</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Restitutions réussies</h6>
+                        <h4 class="card-title text-success">[[${stats.cartesRestituees}]]</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">En attente</h6>
+                        <h4 class="card-title text-warning">[[${stats.cartesEnAttente}]]</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Taux de restitution</h6>
+                        <h4 class="card-title text-info">[[${#numbers.formatDecimal(stats.tauxRestitution, 1, 2)}]]%</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
