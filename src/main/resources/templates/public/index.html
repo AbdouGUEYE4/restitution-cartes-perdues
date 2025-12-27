@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartes Perdues Sénégal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 56px; }
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">
+            <i class="bi bi-credit-card"></i> Cartes Perdues Sénégal
+        </a>
+        <a th:href="@{/admin/login}" class="btn btn-outline-light">
+            <i class="bi bi-shield-lock"></i> Administration
+        </a>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 mb-4">Retrouvez vos cartes perdues</h1>
+        <p class="lead mb-4">Plateforme officielle de recherche et restitution des cartes d'identité perdues au Sénégal</p>
+        <div class="row justify-content-center">
+            <div class="col-md-3 mb-3">
+                <a th:href="@{/publier}" class="btn btn-light btn-lg w-100">
+                    <i class="bi bi-plus-circle"></i> Publier une carte
+                </a>
+            </div>
+            <div class="col-md-3 mb-3">
+                <a th:href="@{/cartes}" class="btn btn-outline-light btn-lg w-100">
+                    <i class="bi bi-search"></i> Rechercher
+                </a>
+            </div>
+            <div class="col-md-3 mb-3">
+                <a th:href="@{/admin/login}" class="btn btn-warning btn-lg w-100">
+                    <i class="bi bi-shield-lock"></i> Administration
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features -->
+<div class="container py-5">
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="bi bi-shield-check display-4 text-primary"></i>
+                    <h3 class="card-title">Sécurisé</h3>
+                    <p class="card-text">Protection des données personnelles conformément à la loi</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="bi bi-lightning-charge display-4 text-success"></i>
+                    <h3 class="card-title">Rapide</h3>
+                    <p class="card-text">Notification instantanée lors de la découverte d'une carte</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <i class="bi bi-people display-4 text-info"></i>
+                    <h3 class="card-title">Communautaire</h3>
+                    <p class="card-text">Solidarité citoyenne pour aider à retrouver les documents perdus</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-dark text-white py-4">
+    <div class="container text-center">
+        <p>&copy; 2024 Cartes Perdues Sénégal. Tous droits réservés.</p>
+        <p>
+            <a th:href="@{/admin/login}" class="text-white-50">Administration</a> |
+            <a th:href="@{/contactez-nous}" class="text-white-50">Contact</a> |
+            <a th:href="@{/a-propos}" class="text-white-50">À propos</a>
+        </p>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+</body>
+</html>

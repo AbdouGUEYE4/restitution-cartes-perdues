@@ -19,4 +19,6 @@ public interface AdministrateurRepository extends JpaRepository<Administrateur, 
 
     // Rechercher par nom complet (LIKE)
     java.util.List<Administrateur> findByNomCompletContainingIgnoreCase(String nomComplet);
+
+    long countByActifTrue();
 }

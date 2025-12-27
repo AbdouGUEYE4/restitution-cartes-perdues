@@ -6,179 +6,47 @@ import sn.cartesperdues.repository.CarteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
+
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class CarteService {
 
     @Autowired
     private CarteRepository carteRepository;
 
-    // Chemin de stockage des images (à configurer dans application.properties)
-    private final String uploadDir = "uploads/cartes/";
-
-    // Publier une nouvelle carte
-    @Transactional
-    public Carte publierCarte(Carte carte, MultipartFile imageFile) throws IOException {
-        // Validation basique
-        if (carte.getNomComplet() == null || carte.getNomComplet().trim().isEmpty()) {
-            throw new IllegalArgumentException("Le nom complet est obligatoire");
-        }
-        if (carte.getTelephoneRamasseur() == null || carte.getTelephoneRamasseur().trim().isEmpty()) {
-            throw new IllegalArgumentException("Le téléphone du ramasseur est obligatoire");
-        }
-
-        // Définir la date de publication
-        carte.setDatePublication(LocalDateTime.now());
-        carte.setStatut(StatutCarte.EN_ATTENTE);
-        carte.setContactCount(0);
-
-        // Gérer l'upload de l'image
-        if (imageFile != null && !imageFile.isEmpty()) {
-            String fileName = saveImage(imageFile);
-            carte.setImageUrl(fileName);
-        }
-
-        // Masquer partiellement le numéro pour l'affichage public
-        // (Le numéro complet est stocké mais masqué dans les réponses)
-
-        return carteRepository.save(carte);
+    // Retourne Optional
+    public Optional<Carte> getCarteById(Long id) {
+        return carteRepository.findById(id);
     }
 
-    // Valider une carte (par admin)
-    @Transactional
-    public Carte validerCarte(Long carteId, Long adminId) {
-        Carte carte = carteRepository.findById(carteId)
-                .orElseThrow(() -> new RuntimeException("Carte non trouvée"));
-
-        if (carte.getStatut() != StatutCarte.EN_ATTENTE) {
-            throw new RuntimeException("Cette carte ne peut pas être validée");
-        }
-
-        carte.setStatut(StatutCarte.VALIDEE);
-        return carteRepository.save(carte);
+    // Méthode qui lance une exception si non trouvé
+    public Carte findCarteById(Long id) {
+        return carteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Carte non trouvée avec ID: " + id));
     }
 
-    // Marquer une carte comme restituée
-    @Transactional
-    public Carte marquerCommeRestituee(Long carteId) {
-        Carte carte = carteRepository.findById(carteId)
-                .orElseThrow(() -> new RuntimeException("Carte non trouvée"));
-
-        carte.setStatut(StatutCarte.RESTITUEE);
-        return carteRepository.save(carte);
+    // Autres méthodes
+    public List<Carte> getAllCartes() {
+        return carteRepository.findAll();
     }
 
-    // Supprimer une carte (soft delete par admin)
-    @Transactional
-    public Carte supprimerCarte(Long carteId, String raison, Long adminId) {
-        Carte carte = carteRepository.findById(carteId)
-                .orElseThrow(() -> new RuntimeException("Carte non trouvée"));
-
-        carte.setStatut(StatutCarte.SUPPRIMEE);
-        carte.setRaisonSuppression(raison);
-        return carteRepository.save(carte);
-    }
-
-    // Rechercher des cartes (pour le public)
-    public List<Carte> rechercherCartes(String keyword, String typeCarte, String lieu) {
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            return carteRepository.searchByKeyword(keyword.trim());
-        }
-
-        if (typeCarte != null && lieu != null) {
-            return carteRepository.findByNomCompletContainingIgnoreCaseAndTypeCarteAndLieuTrouveContainingIgnoreCase(
-                    "", typeCarte, lieu);
-        }
-
-        // Retourner les cartes validées récentes
-        return carteRepository.findByStatutOrderByDatePublicationDesc(StatutCarte.VALIDEE);
-    }
-
-    // Récupérer les cartes en attente de validation (pour admin)
     public List<Carte> getCartesEnAttente() {
-        return carteRepository.findByStatutOrderByDatePublicationAsc(StatutCarte.EN_ATTENTE);
+        return carteRepository.findByStatut(StatutCarte.EN_ATTENTE);
     }
 
-    // Récupérer les cartes validées
     public List<Carte> getCartesValidees() {
         return carteRepository.findByStatut(StatutCarte.VALIDEE);
     }
 
-    // Récupérer une carte par ID (avec vérification de statut)
-    public Optional<Carte> getCarteById(Long id) {
-        Optional<Carte> carte = carteRepository.findById(id);
-
-        // Ne retourner que les cartes validées ou en attente
-        if (carte.isPresent() &&
-                (carte.get().getStatut() == StatutCarte.VALIDEE ||
-                        carte.get().getStatut() == StatutCarte.EN_ATTENTE)) {
-            return carte;
-        }
-
-        return Optional.empty();
+    public List<Carte> getCartesRestituees() {
+        return carteRepository.findByStatut(StatutCarte.RESTITUEE);
     }
 
-    // Incrémenter le compteur de contacts
-    @Transactional
-    public void incrementerContactCount(Long carteId) {
-        Carte carte = carteRepository.findById(carteId)
-                .orElseThrow(() -> new RuntimeException("Carte non trouvée"));
-
-        carte.setContactCount(carte.getContactCount() + 1);
-        carteRepository.save(carte);
-    }
-
-    // Obtenir le numéro complet (pour le contact)
-    public String getTelephoneComplet(Long carteId) {
-        Carte carte = carteRepository.findById(carteId)
-                .orElseThrow(() -> new RuntimeException("Carte non trouvée"));
-
-        return carte.getTelephoneRamasseur();
-    }
-
-    // Masquer partiellement un numéro pour l'affichage public
-    public String masquerTelephone(String telephone) {
-        if (telephone == null || telephone.length() < 4) {
-            return "***";
-        }
-
-        int longueur = telephone.length();
-        String debut = telephone.substring(0, 2);
-        String fin = telephone.substring(longueur - 2);
-
-        return debut + "***" + fin;
-    }
-
-    // Sauvegarder une image
-    private String saveImage(MultipartFile file) throws IOException {
-        // Créer le répertoire s'il n'existe pas
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-
-        // Générer un nom de fichier unique
-        String originalFileName = file.getOriginalFilename();
-        String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-        String fileName = UUID.randomUUID().toString() + fileExtension;
-
-        // Sauvegarder le fichier
-        Path filePath = uploadPath.resolve(fileName);
-        Files.copy(file.getInputStream(), filePath);
-
-        return fileName;
-    }
-
-    // Statistiques
     public long countCartesEnAttente() {
         return carteRepository.countByStatut(StatutCarte.EN_ATTENTE);
     }
@@ -189,5 +57,114 @@ public class CarteService {
 
     public long countCartesRestituees() {
         return carteRepository.countByStatut(StatutCarte.RESTITUEE);
+    }
+
+    public Carte createCarte(Carte carte) {
+        carte.setStatut(StatutCarte.EN_ATTENTE);
+        carte.setContactCount(0);
+        return carteRepository.save(carte);
+    }
+
+    public Carte updateCarte(Long id, Carte carteDetails) {
+        Carte carte = findCarteById(id);
+
+        // Mettre à jour les champs
+        carte.setTypeCarte(carteDetails.getTypeCarte());
+        carte.setNomComplet(carteDetails.getNomComplet());
+        carte.setNumeroCarte(carteDetails.getNumeroCarte());
+        carte.setDateNaissance(carteDetails.getDateNaissance());
+        carte.setLieuTrouve(carteDetails.getLieuTrouve());
+        carte.setTelephoneRamasseur(carteDetails.getTelephoneRamasseur());
+        carte.setImageUrl(carteDetails.getImageUrl());
+        carte.setStatut(carteDetails.getStatut());
+        carte.setContactCount(carteDetails.getContactCount());
+        carte.setRaisonSuppression(carteDetails.getRaisonSuppression());
+
+        return carteRepository.save(carte);
+    }
+
+    public void deleteCarte(Long id) {
+        Carte carte = findCarteById(id);
+        carteRepository.delete(carte);
+    }
+
+    public Carte validerCarte(Long id) {
+        Carte carte = findCarteById(id);
+        carte.setStatut(StatutCarte.VALIDEE);
+        return carteRepository.save(carte);
+    }
+
+    public Carte marquerCommeRestituee(Long id) {
+        Carte carte = findCarteById(id);
+        carte.setStatut(StatutCarte.RESTITUEE);
+        return carteRepository.save(carte);
+    }
+
+    public void incrementerContactCount(Long id) {
+        Carte carte = findCarteById(id);
+        carte.setContactCount(carte.getContactCount() + 1);
+        carteRepository.save(carte);
+    }
+
+    public List<Carte> rechercherCartes(String search, String type, String statut) {
+        // Implémentation basique - à améliorer
+        if (search != null && !search.trim().isEmpty()) {
+            return carteRepository.findByNomCompletContainingIgnoreCase(search);
+        }
+        return carteRepository.findAll();
+    }
+
+    public Carte publierCarte(Carte carte, Object o) {
+        // Définir les valeurs par défaut pour une nouvelle carte
+        carte.setStatut(StatutCarte.EN_ATTENTE);
+        carte.setContactCount(0);
+        carte.setDatePublication(java.time.LocalDateTime.now());
+
+        return carteRepository.save(carte);
+    }
+
+    // ==== MÉTHODE POUR LE TÉLÉPHONE ====
+    public String getTelephoneComplet(Long carteId) {
+        Carte carte = findCarteById(carteId);
+        return formatTelephone(carte.getTelephoneRamasseur());
+    }
+
+    // Méthode utilitaire pour formater le téléphone
+    private String formatTelephone(String telephone) {
+        if (telephone == null || telephone.trim().isEmpty()) {
+            return "Non renseigné";
+        }
+
+        String numeroNettoye = telephone.replaceAll("[^0-9+]", "");
+
+        // Format déjà international
+        if (numeroNettoye.startsWith("+221") && numeroNettoye.length() == 13) {
+            return numeroNettoye;
+        }
+
+        // Format avec 221
+        if (numeroNettoye.startsWith("221") && numeroNettoye.length() == 12) {
+            return "+" + numeroNettoye;
+        }
+
+        // Format local 9 chiffres (77, 76, 78, 70)
+        if (numeroNettoye.matches("^[7][0-9]{8}$") && numeroNettoye.length() == 9) {
+            return "+221" + numeroNettoye;
+        }
+
+        // Format local avec 0
+        if (numeroNettoye.matches("^0[7][0-9]{8}$") && numeroNettoye.length() == 10) {
+            return "+221" + numeroNettoye.substring(1);
+        }
+
+        // Retourner le numéro tel quel si aucun format reconnu
+        return telephone;
+    }
+    // Statistiques par type
+    public Map<String, Long> getStatistiquesParType() {
+        // Implémentation basique
+        List<Carte> cartes = getAllCartes();
+        return cartes.stream()
+                .collect(Collectors.groupingBy(Carte::getTypeCarte, Collectors.counting()));
     }
 }

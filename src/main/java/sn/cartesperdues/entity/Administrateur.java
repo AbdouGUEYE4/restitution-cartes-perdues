@@ -34,6 +34,13 @@ public class Administrateur {
     @Column(name = "telephone")
     private String telephone;
 
+    // NOUVEAUX CHAMPS AJOUTÉS
+    @Column(name = "actif", nullable = false)
+    private Boolean actif = true;  // Par défaut actif
+
+    @Column(name = "login_attempts")
+    private Integer loginAttempts = 0;  // Tentatives de connexion échouées
+
     // Constructeur par défaut
     public Administrateur() {}
 
@@ -42,5 +49,7 @@ public class Administrateur {
         this.username = username;
         this.passwordHash = passwordHash;
         this.nomComplet = nomComplet;
+        this.actif = true;  // Initialisé à true
+        this.loginAttempts = 0;  // Initialisé à 0
     }
 }

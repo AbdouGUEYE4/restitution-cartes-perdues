@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="admin/dashboard.html :: head(~{::title})">
+    <title>Gestion des signalements - Admin</title>
+</head>
+<body>
+<!-- Sidebar -->
+<div th:replace="admin/dashboard.html :: sidebar"></div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-flag text-warning"></i> Gestion des signalements</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/admin/dashboard}">Tableau de bord</a></li>
+                    <li class="breadcrumb-item active">Signalements</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/admin/signalements}"
+               th:class="${statutFiltre == null ? 'btn btn-primary' : 'btn btn-outline-primary'}">
+                Tous
+            </a>
+            <a th:href="@{/admin/signalements(statut='NOUVEAU')}"
+               th:class="${statutFiltre == 'NOUVEAU' ? 'btn btn-warning' : 'btn btn-outline-warning'}">
+                Nouveaux
+            </a>
+            <a th:href="@{/admin/signalements(statut='EN_COURS')}"
+               th:class="${statutFiltre == 'EN_COURS' ? 'btn btn-info' : 'btn btn-outline-info'}">
+                En cours
+            </a>
+            <a th:href="@{/admin/signalements(statut='RESOLU')}"
+               th:class="${statutFiltre == 'RESOLU' ? 'btn btn-success' : 'btn btn-outline-success'}">
+                Résolus
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages d'alerte -->
+    <div th:replace="admin/dashboard.html :: alerts"></div>
+
+    <!-- Liste des signalements -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <span th:if="${statutFiltre == null}">Tous les signalements</span>
+                    <span th:if="${statutFiltre == 'NOUVEAU'}">Nouveaux signalements</span>
+                    <span th:if="${statutFiltre == 'EN_COURS'}">Signalements en cours</span>
+                    <span th:if="${statutFiltre == 'RESOLU'}">Signalements résolus</span>
+                    <span class="badge bg-secondary ms-2" th:text="${signalements.size()}"></span>
+                </h5>
+            </div>
+        </div>
+        <div class="card-body">
+            <div th:if="${signalements.empty}" class="text-center py-5">
+                <i class="bi bi-flag text-success fs-1"></i>
+                <h5 class="mt-3">Aucun signalement</h5>
+                <p class="text-muted">Aucun signalement ne correspond à vos critères.</p>
+            </div>
+
+            <div th:if="${!signalements.empty}">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Carte signalée</th>
+                            <th>Raison</th>
+                            <th>Description</th>
+                            <th>Signaleur</th>
+                            <th>Date</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="signalement : ${signalements}">
+                            <td th:text="${signalement.id}"></td>
+                            <td>
+                                <a th:href="@{/cartes/{id}(id=${signalement.carte.id})}"
+                                   target="_blank"
+                                   class="text-decoration-none">
+                                    <strong th:text="${signalement.carte.nomComplet}"></strong>
+                                </a>
+                                <br>
+                                <small class="text-muted" th:text="${signalement.carte.typeCarte}"></small>
+                            </td>
+                            <td>
+                                        <span th:class="${signalement.raison == 'Fraude' ? 'badge bg-danger' :
+                                                        signalement.raison == 'Information erronée' ? 'badge bg-warning' :
+                                                        'badge bg-secondary'}">
+                                            [[${signalement.raison}]]
+                                        </span>
+                            </td>
+                            <td>
+                                <small th:text="${signalement.description}"
+                                       th:if="${signalement.description}"></small>
+                                <small class="text-muted" th:unless="${signalement.description}">
+                                    Aucune description
+                                </small>
+                            </td>
+                            <td>
+                                <small th:text="${signalement.emailSignaleur}"
+                                       th:if="${signalement.emailSignaleur}"></small>
+                                <small class="text-muted" th:unless="${signalement.emailSignaleur}">
+                                    Anonyme
+                                </small>
+                            </td>
+                            <td>
+                                <small th:text="${#dates.format(signalement.dateSignalement, 'dd/MM/yyyy HH:mm')}"></small>
+                            </td>
+                            <td>
+                                        <span th:class="${signalement.statut == 'NOUVEAU' ? 'badge bg-warning' :
+                                                        signalement.statut == 'EN_COURS' ? 'badge bg-info' :
+                                                        signalement.statut == 'RESOLU' ? 'badge bg-success' :
+                                                        'badge bg-secondary'}">
+                                            [[${signalement.statut}]]
+                                        </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <!-- Actions selon le statut -->
+                                    <th:block th:if="${signalement.statut == 'NOUVEAU'}">
+                                        <form th:action="@{/admin/signalements/traiter}" method="post" class="d-inline">
+                                            <input type="hidden" name="signalementId" th:value="${signalement.id}">
+                                            <input type="hidden" name="action" value="EN_COURS">
+                                            <button type="submit" class="btn btn-info btn-action" title="Prendre en charge">
+                                                <i class="bi bi-gear"></i>
+                                            </button>
+                                        </form>
+                                    </th:block>
+
+                                    <th:block th:if="${signalement.statut == 'EN_COURS'}">
+                                        <form th:action="@{/admin/signalements/traiter}" method="post" class="d-inline">
+                                            <input type="hidden" name="signalementId" th:value="${signalement.id}">
+                                            <input type="hidden" name="action" value="RESOLU">
+                                            <button type="submit" class="btn btn-success btn-action" title="Marquer comme résolu">
+                                                <i class="bi bi-check"></i>
+                                            </button>
+                                        </form>
+                                    </th:block>
+
+                                    <a th:href="@{/cartes/{id}(id=${signalement.carte.id})}#signalement"
+                                       target="_blank"
+                                       class="btn btn-secondary btn-action"
+                                       title="Voir détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+
+                                    <form th:action="@{/admin/signalements/traiter}" method="post" class="d-inline">
+                                        <input type="hidden" name="signalementId" th:value="${signalement.id}">
+                                        <input type="hidden" name="action" value="REJETE">
+                                        <button type="submit" class="btn btn-danger btn-action" title="Rejeter">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<div th:replace="admin/dashboard.html :: scripts"></div>
+</body>
+</html>

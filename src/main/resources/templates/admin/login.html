@@ -106,26 +106,25 @@
         </div>
 
         <!-- Formulaire de connexion -->
-        <form th:action="@{/admin/login}" method="post" th:object="${loginDTO}">
+        <!-- Formulaire de connexion SPRING SECURITY -->
+        <form th:action="@{/admin/login}" method="post">
             <div class="mb-3">
                 <label class="form-label">Nom d'utilisateur</label>
                 <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-person"></i>
-                        </span>
-                    <input type="text" class="form-control" th:field="*{username}"
-                           placeholder="admin" required>
+            <span class="input-group-text">
+                <i class="bi bi-person"></i>
+            </span>
+                    <input type="text" class="form-control" name="username" required>
                 </div>
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Mot de passe</label>
                 <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-lock"></i>
-                        </span>
-                    <input type="password" class="form-control" th:field="*{password}"
-                           placeholder="••••••••" required>
+            <span class="input-group-text">
+                <i class="bi bi-lock"></i>
+            </span>
+                    <input type="password" class="form-control" name="password" required>
                 </div>
             </div>
 
@@ -133,10 +132,6 @@
                 <button type="submit" class="btn btn-login">
                     <i class="bi bi-box-arrow-in-right"></i> Se connecter
                 </button>
-            </div>
-
-            <div class="text-center">
-                <a href="#" class="forgot-link">Mot de passe oublié ?</a>
             </div>
         </form>
 

@@ -104,4 +104,21 @@ public class AdministrateurService {
     public List<Administrateur> searchByNomComplet(String nomComplet) {
         return administrateurRepository.findByNomCompletContainingIgnoreCase(nomComplet);
     }
+    // Méthode pour récupérer par username
+    public Administrateur getAdministrateurByUsername(String username) {
+        return administrateurRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Admin non trouvé: " + username));
+    }
+    // Vérifier un mot de passe
+    public boolean verifyPassword(String rawPassword, String encodedPassword) {
+        return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+
+    // Compter les administrateurs actifs
+    public long countActiveAdmins() {
+        return administrateurRepository.countByActifTrue();
+    }
+
+    public void resetPassword(Long id, String newPassword) {
+    }
 }

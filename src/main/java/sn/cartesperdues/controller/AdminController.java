@@ -4,17 +4,22 @@ import sn.cartesperdues.dto.*;
 import sn.cartesperdues.entity.Administrateur;
 import sn.cartesperdues.entity.Carte;
 import sn.cartesperdues.entity.Signalement;
+import sn.cartesperdues.entity.StatutCarte;
+import sn.cartesperdues.entity.StatutSignalement;
 import sn.cartesperdues.service.AdministrateurService;
 import sn.cartesperdues.service.CarteService;
 import sn.cartesperdues.service.SignalementService;
 import sn.cartesperdues.service.StatistiqueService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 import java.util.List;
 
 @Controller
@@ -33,105 +38,223 @@ public class AdminController {
     @Autowired
     private StatistiqueService statistiqueService;
 
-    // Page de login admin
+    // ==================== AUTHENTIFICATION ====================
+
+    // Page de login (GET)
     @GetMapping("/login")
-    public String showLoginForm(Model model) {
+    public String showLoginForm(@RequestParam(required = false) String error,
+                                @RequestParam(required = false) String logout,
+                                Model model) {
+
+        // Si déjà connecté, rediriger vers le dashboard
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() &&
+                !"anonymousUser".equals(auth.getName())) {
+            return "redirect:/admin/dashboard";
+        }
+
+        // Messages d'erreur/succès
+        if (error != null) {
+            model.addAttribute("error", "Nom d'utilisateur ou mot de passe incorrect");
+        }
+        if (logout != null) {
+            model.addAttribute("logout", "Vous avez été déconnecté avec succès");
+        }
+
         model.addAttribute("loginDTO", new AdminLoginDTO());
         return "admin/login";
     }
 
-    // Traitement du login
-    @PostMapping("/login")
-    public String login(@Valid @ModelAttribute AdminLoginDTO loginDTO,
-                        BindingResult result,
-                        Model model,
-                        RedirectAttributes redirectAttributes) {
+    // Page d'accès refusé
+    @GetMapping("/access-denied")
+    public String accessDenied() {
+        return "admin/access-denied";
+    }
 
-        if (result.hasErrors()) {
-            return "admin/login";
-        }
-
-        try {
-            var adminOpt = administrateurService.authenticate(loginDTO.getUsername(), loginDTO.getPassword());
-
-            if (adminOpt.isPresent()) {
-                // En production, on utiliserait une session Spring Security
-                redirectAttributes.addFlashAttribute("adminId", adminOpt.get().getId());
-                redirectAttributes.addFlashAttribute("adminName", adminOpt.get().getNomComplet());
-                return "redirect:/admin/dashboard";
-            } else {
-                model.addAttribute("error", "Nom d'utilisateur ou mot de passe incorrect");
-                return "admin/login";
+    // Récupérer l'admin connecté
+    private Administrateur getCurrentAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+            if (username != null && !username.isEmpty() && !"anonymousUser".equals(username)) {
+                return administrateurService.getAdministrateurByUsername(username);
             }
+        }
+        return null;
+    }
 
-        } catch (Exception e) {
-            model.addAttribute("error", "Erreur de connexion: " + e.getMessage());
-            return "admin/login";
+    // Ajouter l'admin au model
+    @ModelAttribute
+    public void addAdminToModel(Model model) {
+        String requestURI = org.springframework.web.context.request.RequestContextHolder
+                .getRequestAttributes() != null ?
+                ((org.springframework.web.context.request.ServletRequestAttributes)
+                        org.springframework.web.context.request.RequestContextHolder
+                                .getRequestAttributes()).getRequest().getRequestURI() : "";
+
+        if (!requestURI.contains("/admin/login") && !requestURI.contains("/admin/access-denied")) {
+            Administrateur admin = getCurrentAdmin();
+            if (admin != null) {
+                model.addAttribute("adminName", admin.getNomComplet());
+                model.addAttribute("adminId", admin.getId());
+            }
         }
     }
 
-    // Dashboard admin
+    // ==================== DASHBOARD ====================
+
+    @GetMapping("")
+    public String adminHome() {
+        return "redirect:/admin/dashboard";
+    }
+
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
-        // Récupérer les statistiques
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
         DashboardStatsDTO stats = new DashboardStatsDTO();
         stats.setCartesEnAttente(carteService.countCartesEnAttente());
         stats.setCartesValidees(carteService.countCartesValidees());
         stats.setCartesRestituees(carteService.countCartesRestituees());
         stats.setNouveauxSignalements(signalementService.countNouveauxSignalements());
 
-        // Cartes en attente de validation
-        List<Carte> cartesEnAttente = carteService.getCartesEnAttente();
-
-        // Nouveaux signalements
-        List<Signalement> nouveauxSignalements = signalementService.getNouveauxSignalements();
-
         model.addAttribute("stats", stats);
-        model.addAttribute("cartesEnAttente", cartesEnAttente);
-        model.addAttribute("nouveauxSignalements", nouveauxSignalements);
+        model.addAttribute("cartesEnAttente", carteService.getCartesEnAttente());
+        model.addAttribute("nouveauxSignalements", signalementService.getNouveauxSignalements());
 
         return "admin/dashboard";
     }
 
-    // Gestion des cartes
+    // ==================== GESTION DES CARTES ====================
+
     @GetMapping("/cartes")
-    public String gestionCartes(@RequestParam(required = false) String statut, Model model) {
-        List<Carte> cartes;
-
-        if (statut != null && !statut.isEmpty()) {
-            switch (statut.toUpperCase()) {
-                case "EN_ATTENTE":
-                    cartes = carteService.getCartesEnAttente();
-                    break;
-                case "VALIDEE":
-                    cartes = carteService.getCartesValidees();
-                    break;
-                case "RESTITUEE":
-                    // Implémenter cette méthode dans le service
-                    // cartes = carteService.getCartesRestituees();
-                    cartes = List.of();
-                    break;
-                default:
-                    cartes = carteService.getCartesEnAttente();
-            }
-        } else {
-            cartes = carteService.getCartesEnAttente();
+    public String listCartes(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
         }
 
+        List<Carte> cartes = carteService.getAllCartes();
         model.addAttribute("cartes", cartes);
-        model.addAttribute("statutFiltre", statut);
-        return "admin/cartes";
+        model.addAttribute("totalCartes", cartes.size());
+
+        return "admin/cartes/list";
     }
 
-    // Valider une carte
-    @PostMapping("/cartes/valider")
-    public String validerCarte(@RequestParam Long carteId,
-                               @RequestParam Long adminId,
-                               RedirectAttributes redirectAttributes) {
+    @GetMapping("/cartes/en-attente")
+    public String cartesEnAttente(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        List<Carte> cartes = carteService.getCartesEnAttente();
+        model.addAttribute("cartes", cartes);
+        model.addAttribute("titre", "Cartes en attente de validation");
+
+        return "admin/cartes/list";
+    }
+
+    @GetMapping("/cartes/validees")
+    public String cartesValidees(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        List<Carte> cartes = carteService.getCartesValidees();
+        model.addAttribute("cartes", cartes);
+        model.addAttribute("titre", "Cartes validées");
+
+        return "admin/cartes/list";
+    }
+
+    @GetMapping("/cartes/restituees")
+    public String cartesRestituees(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        List<Carte> cartes = carteService.getCartesRestituees();
+        model.addAttribute("cartes", cartes);
+        model.addAttribute("titre", "Cartes restituées");
+
+        return "admin/cartes/list";
+    }
+
+    @GetMapping("/cartes/{id}")
+    public String detailCarte(@PathVariable Long id, Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
 
         try {
-            carteService.validerCarte(carteId, adminId);
-            redirectAttributes.addFlashAttribute("success", "Carte validée avec succès");
+            Carte carte = carteService.findCarteById(id);
+            model.addAttribute("carte", carte);
+            model.addAttribute("signalements", signalementService.getSignalementsByCarteId(id));
+            return "admin/cartes/detail";
+        } catch (Exception e) {
+            return "redirect:/admin/cartes?error=Carte+non+trouvée";
+        }
+    }
+
+    @PostMapping("/cartes/{id}/valider")
+    public String validerCarte(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            carteService.validerCarte(id);
+            redirectAttributes.addFlashAttribute("success", "Carte validée avec succès !");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
+        }
+
+        return "redirect:/admin/cartes/" + id;
+    }
+
+    @PostMapping("/cartes/{id}/restituee")
+    public String marquerRestituee(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            carteService.marquerCommeRestituee(id);
+            redirectAttributes.addFlashAttribute("success", "Carte marquée comme restituée !");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
+        }
+
+        return "redirect:/admin/cartes/" + id;
+    }
+
+    @GetMapping("/cartes/{id}/supprimer")
+    public String showDeleteCarteForm(@PathVariable Long id, Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            Carte carte = carteService.findCarteById(id);
+            model.addAttribute("carte", carte);
+            return "admin/cartes/delete";
+        } catch (Exception e) {
+            return "redirect:/admin/cartes?error=Carte+non+trouvée";
+        }
+    }
+
+    @PostMapping("/cartes/{id}/supprimer")
+    public String deleteCarte(@PathVariable Long id,
+                              @RequestParam(required = false) String raison,
+                              RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            carteService.deleteCarte(id);
+            redirectAttributes.addFlashAttribute("success", "Carte supprimée avec succès !");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
         }
@@ -139,50 +262,79 @@ public class AdminController {
         return "redirect:/admin/cartes";
     }
 
-    // Supprimer une carte
-    @PostMapping("/cartes/supprimer")
-    public String supprimerCarte(@RequestParam Long carteId,
-                                 @RequestParam String raison,
-                                 @RequestParam Long adminId,
-                                 RedirectAttributes redirectAttributes) {
+    // ==================== GESTION DES SIGNALEMENTS ====================
 
-        try {
-            carteService.supprimerCarte(carteId, raison, adminId);
-            redirectAttributes.addFlashAttribute("success", "Carte supprimée avec succès");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
-        }
-
-        return "redirect:/admin/cartes";
-    }
-
-    // Gestion des signalements
     @GetMapping("/signalements")
-    public String gestionSignalements(@RequestParam(required = false) String statut, Model model) {
-        List<Signalement> signalements;
-
-        if (statut != null && !statut.isEmpty()) {
-            // Implémenter findByStatut dans le service
-            // signalements = signalementService.getSignalementsByStatut(statut);
-            signalements = signalementService.getAllSignalements();
-        } else {
-            signalements = signalementService.getAllSignalements();
+    public String listSignalements(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
         }
 
+        List<Signalement> signalements = signalementService.getAllSignalements();
         model.addAttribute("signalements", signalements);
-        model.addAttribute("statutFiltre", statut);
-        return "admin/signalements";
+        model.addAttribute("totalSignalements", signalements.size());
+        model.addAttribute("nouveauxCount", signalementService.countNouveauxSignalements());
+
+        return "admin/signalements/list";
     }
 
-    // Traiter un signalement
-    @PostMapping("/signalements/traiter")
-    public String traiterSignalement(@RequestParam Long signalementId,
-                                     @RequestParam String action,
-                                     RedirectAttributes redirectAttributes) {
+    @GetMapping("/signalements/nouveaux")
+    public String nouveauxSignalements(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        List<Signalement> signalements = signalementService.getNouveauxSignalements();
+        model.addAttribute("signalements", signalements);
+        model.addAttribute("titre", "Nouveaux signalements");
+
+        return "admin/signalements/list";
+    }
+
+    @GetMapping("/signalements/{id}")
+    public String detailSignalement(@PathVariable Long id, Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
 
         try {
-            signalementService.traiterSignalement(signalementId, action);
-            redirectAttributes.addFlashAttribute("success", "Signalement traité avec succès");
+            Signalement signalement = signalementService.getSignalementById(id);
+            model.addAttribute("signalement", signalement);
+            model.addAttribute("statuts", StatutSignalement.values());
+            return "admin/signalements/detail";
+        } catch (Exception e) {
+            return "redirect:/admin/signalements?error=Signalement+non+trouvé";
+        }
+    }
+
+    @PostMapping("/signalements/{id}/statut")
+    public String updateStatutSignalement(@PathVariable Long id,
+                                          @RequestParam StatutSignalement statut,
+                                          RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            signalementService.mettreAJourStatut(id, statut);
+            redirectAttributes.addFlashAttribute("success", "Statut mis à jour avec succès !");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
+        }
+
+        return "redirect:/admin/signalements/" + id;
+    }
+
+    @PostMapping("/signalements/{id}/supprimer")
+    public String deleteSignalement(@PathVariable Long id,
+                                    RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            signalementService.supprimerSignalement(id);
+            redirectAttributes.addFlashAttribute("success", "Signalement supprimé avec succès !");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
         }
@@ -190,86 +342,222 @@ public class AdminController {
         return "redirect:/admin/signalements";
     }
 
-    // Gestion des administrateurs
+    // ==================== GESTION DES ADMINISTRATEURS ====================
+
     @GetMapping("/administrateurs")
-    public String gestionAdministrateurs(Model model) {
-        List<Administrateur> administrateurs = administrateurService.getAllAdministrateurs();
-        model.addAttribute("administrateurs", administrateurs);
-        model.addAttribute("adminDTO", new AdminDTO());
-        return "admin/administrateurs";
-    }
-
-    // Ajouter un nouvel administrateur
-    @PostMapping("/administrateurs/ajouter")
-    public String ajouterAdministrateur(@Valid @ModelAttribute AdminDTO adminDTO,
-                                        BindingResult result,
-                                        RedirectAttributes redirectAttributes) {
-
-        if (result.hasErrors()) {
-            redirectAttributes.addFlashAttribute("error", "Veuillez corriger les erreurs du formulaire");
-            return "redirect:/admin/administrateurs";
+    public String listAdministrateurs(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
         }
 
-        if (!adminDTO.passwordsMatch()) {
-            redirectAttributes.addFlashAttribute("error", "Les mots de passe ne correspondent pas");
-            return "redirect:/admin/administrateurs";
+        List<Administrateur> administrateurs = administrateurService.getAllAdministrateurs();
+        model.addAttribute("administrateurs", administrateurs);
+
+        return "admin/administrateurs/list";
+    }
+
+    @GetMapping("/administrateurs/creer")
+    public String showCreateAdminForm(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        model.addAttribute("administrateur", new Administrateur());
+        return "admin/administrateurs/create";
+    }
+
+    @PostMapping("/administrateurs/creer")
+    public String createAdministrateur(@Valid @ModelAttribute("administrateur") Administrateur administrateur,
+                                       BindingResult result,
+                                       Model model,
+                                       RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        if (result.hasErrors()) {
+            return "admin/administrateurs/create";
         }
 
         try {
-            Administrateur admin = new Administrateur();
-            admin.setUsername(adminDTO.getUsername());
-            admin.setPasswordHash(adminDTO.getPassword());
-            admin.setNomComplet(adminDTO.getNomComplet());
-            admin.setEmail(adminDTO.getEmail());
-            admin.setTelephone(adminDTO.getTelephone());
-            admin.setRole(adminDTO.getRole());
-
-            administrateurService.createAdministrateur(admin);
-            redirectAttributes.addFlashAttribute("success", "Administrateur ajouté avec succès");
-
+            administrateurService.createAdministrateur(administrateur);
+            redirectAttributes.addFlashAttribute("success", "Administrateur créé avec succès !");
+            return "redirect:/admin/administrateurs";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
+            model.addAttribute("error", e.getMessage());
+            return "admin/administrateurs/create";
         }
-
-        return "redirect:/admin/administrateurs";
     }
 
-    // Supprimer un administrateur
-    @PostMapping("/administrateurs/supprimer")
-    public String supprimerAdministrateur(@RequestParam Long id,
-                                          RedirectAttributes redirectAttributes) {
+    @GetMapping("/administrateurs/{id}/modifier")
+    public String showEditAdminForm(@PathVariable Long id, Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        try {
+            // CORRECTION : Gérer l'Optional
+            Administrateur admin = administrateurService.getAdministrateurById(id)
+                    .orElseThrow(() -> new RuntimeException("Administrateur non trouvé"));
+            model.addAttribute("administrateur", admin);
+            return "admin/administrateurs/edit";
+        } catch (Exception e) {
+            return "redirect:/admin/administrateurs?error=Admin+non+trouvé";
+        }
+    }
+
+    @PostMapping("/administrateurs/{id}/modifier")
+    public String updateAdministrateur(@PathVariable Long id,
+                                       @Valid @ModelAttribute("administrateur") Administrateur administrateur,
+                                       BindingResult result,
+                                       Model model,
+                                       RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        if (result.hasErrors()) {
+            // Récupérer l'admin pour réafficher le formulaire
+            try {
+                Administrateur existingAdmin = administrateurService.getAdministrateurById(id)
+                        .orElseThrow(() -> new RuntimeException("Administrateur non trouvé"));
+                model.addAttribute("administrateur", existingAdmin);
+            } catch (Exception e) {
+                // Ignorer
+            }
+            return "admin/administrateurs/edit";
+        }
+
+        try {
+            administrateurService.updateAdministrateur(id, administrateur);
+            redirectAttributes.addFlashAttribute("success", "Administrateur mis à jour avec succès !");
+            return "redirect:/admin/administrateurs";
+        } catch (Exception e) {
+            model.addAttribute("error", e.getMessage());
+            // Récupérer l'admin existant
+            try {
+                Administrateur existingAdmin = administrateurService.getAdministrateurById(id)
+                        .orElseThrow(() -> new RuntimeException("Administrateur non trouvé"));
+                model.addAttribute("administrateur", existingAdmin);
+            } catch (Exception ex) {
+                // Ignorer
+            }
+            return "admin/administrateurs/edit";
+        }
+    }
+
+    @PostMapping("/administrateurs/{id}/supprimer")
+    public String deleteAdministrateur(@PathVariable Long id,
+                                       RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
 
         try {
             administrateurService.deleteAdministrateur(id);
-            redirectAttributes.addFlashAttribute("success", "Administrateur supprimé avec succès");
+            redirectAttributes.addFlashAttribute("success", "Administrateur supprimé avec succès !");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Erreur: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
 
         return "redirect:/admin/administrateurs";
     }
 
-    // Statistiques détaillées
-    @GetMapping("/statistiques")
-    public String statistiques(Model model) {
-        // Statistiques des 30 derniers jours
-        var stats30Jours = statistiqueService.getStatistiques30Jours();
-        var statsDuJour = statistiqueService.getStatistiquesDuJour();
-        var totalRestitutions = statistiqueService.getTotalRestitutions();
-        var totalPublications = statistiqueService.getTotalPublications();
+    // ==================== PROFIL ADMIN ====================
 
-        model.addAttribute("stats30Jours", stats30Jours);
-        model.addAttribute("statsDuJour", statsDuJour);
-        model.addAttribute("totalRestitutions", totalRestitutions);
-        model.addAttribute("totalPublications", totalPublications);
+    @GetMapping("/profil")
+    public String showProfile(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        Administrateur admin = getCurrentAdmin();
+        model.addAttribute("administrateur", admin);
+
+        return "admin/profil";
+    }
+
+    @PostMapping("/profil/mot-de-passe")
+    public String changePassword(@RequestParam String currentPassword,
+                                 @RequestParam String newPassword,
+                                 @RequestParam String confirmPassword,
+                                 RedirectAttributes redirectAttributes) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        Administrateur admin = getCurrentAdmin();
+
+        // Vérifier le mot de passe actuel
+        if (!administrateurService.verifyPassword(currentPassword, admin.getPasswordHash())) {
+            redirectAttributes.addFlashAttribute("error", "Le mot de passe actuel est incorrect");
+            return "redirect:/admin/profil";
+        }
+
+        // Vérifier la confirmation
+        if (!newPassword.equals(confirmPassword)) {
+            redirectAttributes.addFlashAttribute("error", "Les nouveaux mots de passe ne correspondent pas");
+            return "redirect:/admin/profil";
+        }
+
+        // Vérifier la force du mot de passe
+        if (newPassword.length() < 8) {
+            redirectAttributes.addFlashAttribute("error", "Le mot de passe doit contenir au moins 8 caractères");
+            return "redirect:/admin/profil";
+        }
+
+        // Changer le mot de passe
+        administrateurService.resetPassword(admin.getId(), newPassword);
+
+        redirectAttributes.addFlashAttribute("success", "Mot de passe changé avec succès !");
+        return "redirect:/admin/profil";
+    }
+
+    // ==================== STATISTIQUES ====================
+
+    @GetMapping("/statistiques")
+    public String showStatistics(Model model) {
+        if (getCurrentAdmin() == null) {
+            return "redirect:/admin/login";
+        }
+
+        DashboardStatsDTO stats = new DashboardStatsDTO();
+        stats.setCartesEnAttente(carteService.countCartesEnAttente());
+        stats.setCartesValidees(carteService.countCartesValidees());
+        stats.setCartesRestituees(carteService.countCartesRestituees());
+        stats.setNouveauxSignalements(signalementService.countNouveauxSignalements());
+
+        model.addAttribute("stats", stats);
+        model.addAttribute("totalAdmins", administrateurService.countActiveAdmins());
+        model.addAttribute("cartesParType", carteService.getStatistiquesParType());
+        model.addAttribute("signalementsParRaison", signalementService.getStatistiquesParRaison());
 
         return "admin/statistiques";
     }
 
-    // Logout
-    @GetMapping("/logout")
-    public String logout(RedirectAttributes redirectAttributes) {
-        redirectAttributes.addFlashAttribute("logout", true);
-        return "redirect:/admin/login";
+    // ==================== DEBUG ====================
+
+    @GetMapping("/debug")
+    @ResponseBody
+    public String debug() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== SPRING SECURITY DEBUG ===\n");
+        sb.append("Principal: ").append(auth.getPrincipal()).append("\n");
+        sb.append("Name: ").append(auth.getName()).append("\n");
+        sb.append("Authenticated: ").append(auth.isAuthenticated()).append("\n");
+        sb.append("Authorities: ").append(auth.getAuthorities()).append("\n");
+        return sb.toString();
+    }
+
+    @GetMapping("/test")
+    @ResponseBody
+    public String testAdmin() {
+        Administrateur admin = getCurrentAdmin();
+        if (admin != null) {
+            return "Admin connecté: " + admin.getNomComplet() + " (" + admin.getUsername() + ")";
+        } else {
+            return "Aucun admin connecté";
+        }
     }
 }

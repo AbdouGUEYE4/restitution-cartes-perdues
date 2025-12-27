@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signaler une carte - Cartes Perdues Sénégal</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .signalement-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .icon-container {
+            font-size: 3rem;
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+        .carte-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="signalement-card">
+                <!-- En-tête -->
+                <div class="text-center mb-4">
+                    <div class="icon-container">
+                        <i class="bi bi-flag-fill"></i>
+                    </div>
+                    <h1 class="mb-2">Signaler cette carte</h1>
+                    <p class="text-muted">
+                        Aidez-nous à maintenir la qualité des publications
+                    </p>
+                </div>
+
+                <!-- Informations de la carte -->
+                <div class="carte-info" th:if="${carte}">
+                    <h6><i class="bi bi-info-circle"></i> Carte concernée :</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Nom :</strong> <span th:text="${carte.nomComplet}"></span></p>
+                            <p class="mb-1"><strong>Type :</strong> <span th:text="${carte.typeCarte}"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Lieu :</strong> <span th:text="${carte.lieuTrouve}"></span></p>
+                            <p class="mb-1"><strong>Publiée le :</strong>
+                                <span th:text="${#dates.format(carte.datePublication, 'dd/MM/yyyy')}"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertes -->
+                <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span th:text="${param.error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Formulaire SIMPLIFIÉ -->
+                <form th:action="@{/signaler/carte}" method="post" th:object="${signalementDTO}">
+                    <!-- Champ caché pour l'ID de la carte -->
+                    <input type="hidden" th:field="*{carteId}" th:value="${carte.id}">
+
+                    <!-- Raison du signalement -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Motif du signalement *</label>
+                        <select th:field="*{raison}" class="form-select" required>
+                            <option value="">Choisissez une raison...</option>
+                            <option value="Informations incorrectes">Informations incorrectes</option>
+                            <option value="Publication abusive">Publication abusive</option>
+                            <option value="Contenu inapproprié">Contenu inapproprié</option>
+                            <option value="Carte déjà restituée">Carte déjà restituée</option>
+                            <option value="Autre problème">Autre problème</option>
+                        </select>
+                        <div th:if="${#fields.hasErrors('raison')}" class="text-danger small mt-1">
+                            <span th:errors="*{raison}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Description *</label>
+                        <textarea th:field="*{description}"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Expliquez le problème en quelques mots..."
+                                  required></textarea>
+                        <div th:if="${#fields.hasErrors('description')}" class="text-danger small mt-1">
+                            <span th:errors="*{description}"></span>
+                        </div>
+                        <small class="text-muted">Minimum 10 caractères</small>
+                    </div>
+
+                    <!-- Email (optionnel) -->
+                    <div class="mb-4">
+                        <label class="form-label">Votre email (facultatif)</label>
+                        <input th:field="*{emailSignaleur}"
+                               type="email"
+                               class="form-control"
+                               placeholder="votre@email.com">
+                        <div th:if="${#fields.hasErrors('emailSignaleur')}" class="text-danger small mt-1">
+                            <span th:errors="*{emailSignaleur}"></span>
+                        </div>
+                        <small class="text-muted">Pour vous tenir informé du suivi</small>
+                    </div>
+
+                    <!-- Informations -->
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Comment traitons-nous votre signalement ?</h6>
+                        <ul class="mb-0 small">
+                            <li>Examen sous 24-48 heures par notre équipe</li>
+                            <li>Confidentialité totale de votre signalement</li>
+                            <li>Action appropriée selon la gravité</li>
+                            <li>Vous pouvez rester anonyme si vous le souhaitez</li>
+                        </ul>
+                    </div>
+
+                    <!-- Boutons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-between mt-4">
+                        <a th:href="@{/cartes}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4">
+                            <i class="bi bi-send"></i> Envoyer le signalement
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+
+                <!-- Footer -->
+                <div class="text-center text-muted">
+                    <small>
+                        <i class="bi bi-shield-check"></i>
+                        Vos signalements aident à maintenir une plateforme fiable et sécurisée.
+                    </small>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    &copy; 2024 Cartes Perdues Sénégal |
+                    <a th:href="@{/}" class="text-decoration-none">Retour à l'accueil</a>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Validation simple -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            const raison = document.querySelector('[name="raison"]').value;
+            const description = document.querySelector('[name="description"]').value;
+
+            if (!raison || description.trim().length < 10) {
+                event.preventDefault();
+                alert('Veuillez remplir correctement tous les champs obligatoires.');
+            }
+        });
+    });
+</script>
+</body>
+</html>

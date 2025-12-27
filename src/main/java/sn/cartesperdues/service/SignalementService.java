@@ -1,89 +1,109 @@
 package sn.cartesperdues.service;
 
+import org.jspecify.annotations.Nullable;
 import sn.cartesperdues.entity.Carte;
 import sn.cartesperdues.entity.Signalement;
 import sn.cartesperdues.entity.StatutSignalement;
-import sn.cartesperdues.repository.CarteRepository;
 import sn.cartesperdues.repository.SignalementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class SignalementService {
 
     @Autowired
     private SignalementRepository signalementRepository;
 
     @Autowired
-    private CarteRepository carteRepository;
+    private CarteService carteService;
 
-    // Créer un nouveau signalement
-    @Transactional
-    public Signalement creerSignalement(Signalement signalement) {
-        // Vérifier si la carte existe
-        Carte carte = carteRepository.findById(signalement.getCarte().getId())
-                .orElseThrow(() -> new RuntimeException("Carte non trouvée"));
+    // ========== CRÉATION DE SIGNALEMENTS ==========
 
+    public Signalement signalerCarte(Long carteId, String raison, String description, String emailSignaleur) {
+        // Utilisez findCarteById() qui retourne directement Carte
+        Carte carte = carteService.findCarteById(carteId);
+
+        Signalement signalement = new Signalement();
         signalement.setCarte(carte);
+        signalement.setRaison(raison);
+        signalement.setDescription(description);
+        signalement.setEmailSignaleur(emailSignaleur);
         signalement.setDateSignalement(LocalDateTime.now());
         signalement.setStatut(StatutSignalement.NOUVEAU);
 
         return signalementRepository.save(signalement);
     }
 
-    // Traiter un signalement (par admin)
-    @Transactional
-    public Signalement traiterSignalement(Long signalementId, String action) {
-        Signalement signalement = signalementRepository.findById(signalementId)
-                .orElseThrow(() -> new RuntimeException("Signalement non trouvé"));
+    // ========== LECTURE DE SIGNALEMENTS ==========
 
-        switch (action.toUpperCase()) {
-            case "RESOLU":
-                signalement.setStatut(StatutSignalement.RESOLU);
-                break;
-            case "REJETE":
-                signalement.setStatut(StatutSignalement.REJETE);
-                break;
-            case "EN_COURS":
-                signalement.setStatut(StatutSignalement.EN_COURS);
-                break;
-            default:
-                throw new IllegalArgumentException("Action invalide");
-        }
-
-        return signalementRepository.save(signalement);
-    }
-
-    // Récupérer tous les signalements
     public List<Signalement> getAllSignalements() {
         return signalementRepository.findAll();
     }
 
-    // Récupérer les nouveaux signalements
+    public List<Signalement> getSignalementsByStatut(StatutSignalement statut) {
+        return signalementRepository.findByStatut(statut);
+    }
+
     public List<Signalement> getNouveauxSignalements() {
-        return signalementRepository.findByStatutOrderByDateSignalementAsc(StatutSignalement.NOUVEAU);
+        return signalementRepository.findByStatutOrderByDateSignalementDesc(StatutSignalement.NOUVEAU);
     }
 
-    // Récupérer les signalements pour une carte
-    public List<Signalement> getSignalementsPourCarte(Long carteId) {
-        return signalementRepository.findByCarteId(carteId);
-    }
-
-    // Supprimer un signalement
-    @Transactional
-    public void supprimerSignalement(Long signalementId) {
-        signalementRepository.deleteById(signalementId);
-    }
-
-    // Statistiques
     public long countNouveauxSignalements() {
         return signalementRepository.countByStatut(StatutSignalement.NOUVEAU);
     }
 
-    public long countSignalementsResolus() {
-        return signalementRepository.countByStatut(StatutSignalement.RESOLU);
+    public Signalement getSignalementById(Long id) {
+        return signalementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Signalement non trouvé avec ID: " + id));
+    }
+
+    public List<Signalement> getSignalementsByCarteId(Long carteId) {
+        return signalementRepository.findByCarteId(carteId);
+    }
+
+    // ========== MISE À JOUR ==========
+
+    public Signalement mettreAJourStatut(Long id, StatutSignalement nouveauStatut) {
+        Signalement signalement = getSignalementById(id);
+        signalement.setStatut(nouveauStatut);
+        return signalementRepository.save(signalement);
+    }
+
+    // ========== SUPPRESSION ==========
+
+    public void supprimerSignalement(Long id) {
+        if (!signalementRepository.existsById(id)) {
+            throw new RuntimeException("Signalement non trouvé avec ID: " + id);
+        }
+        signalementRepository.deleteById(id);
+    }
+
+    // ========== VÉRIFICATIONS ==========
+
+    public boolean existeDejaSignalement(Long carteId, String emailSignaleur) {
+        if (emailSignaleur == null || emailSignaleur.trim().isEmpty()) {
+            return false;
+        }
+
+        List<Signalement> signalements = getSignalementsByCarteId(carteId);
+        return signalements.stream()
+                .anyMatch(s -> emailSignaleur.equalsIgnoreCase(s.getEmailSignaleur()));
+    }
+
+    public Map<String, Long> getStatistiquesParRaison() {
+        List<Signalement> signalements = signalementRepository.findAll();
+
+        return signalements.stream()
+                .collect(Collectors.groupingBy(
+                        Signalement::getRaison,
+                        Collectors.counting()
+                ));
     }
 }

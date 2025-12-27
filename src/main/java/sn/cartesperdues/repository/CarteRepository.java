@@ -6,52 +6,64 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import java.time.LocalDateTime;
+
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CarteRepository extends JpaRepository<Carte, Long> {
 
-    // Rechercher par nom (insensible à la casse)
+    // ==== REQUÊTES DE RECHERCHE ====
+
+    // Trouver par nom complet
     List<Carte> findByNomCompletContainingIgnoreCase(String nomComplet);
 
-    // Rechercher par type de carte
+    // Trouver par numéro de carte
+    List<Carte> findByNumeroCarteContaining(String numeroCarte);
+
+    // Trouver par type de carte
     List<Carte> findByTypeCarte(String typeCarte);
 
-    // Rechercher par lieu
-    List<Carte> findByLieuTrouveContainingIgnoreCase(String lieu);
-
-    // Rechercher par statut
+    // Trouver par statut
     List<Carte> findByStatut(StatutCarte statut);
 
-    // Rechercher par date de publication (après une certaine date)
-    List<Carte> findByDatePublicationAfter(LocalDateTime date);
+    // Trouver par lieu
+    List<Carte> findByLieuTrouveContainingIgnoreCase(String lieuTrouve);
 
-    // Recherche combinée (nom + type + lieu)
-    List<Carte> findByNomCompletContainingIgnoreCaseAndTypeCarteAndLieuTrouveContainingIgnoreCase(
-            String nomComplet, String typeCarte, String lieu);
-
-    // Recherche pour le dashboard admin : cartes en attente de validation
-    List<Carte> findByStatutOrderByDatePublicationAsc(StatutCarte statut);
-
-    // Recherche pour l'accueil : cartes validées récentes
-    List<Carte> findByStatutOrderByDatePublicationDesc(StatutCarte statut);
-
-    // Recherche avancée avec @Query
-    @Query("SELECT c FROM Carte c WHERE " +
-            "LOWER(c.nomComplet) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(c.typeCarte) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(c.lieuTrouve) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(c.numeroCarte) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<Carte> searchByKeyword(@Param("keyword") String keyword);
-
-    // Statistiques : compter par statut
+    // Compter par statut
     long countByStatut(StatutCarte statut);
 
-    // Statistiques : compter par type de carte
-    @Query("SELECT c.typeCarte, COUNT(c) FROM Carte c GROUP BY c.typeCarte")
-    List<Object[]> countByTypeCarte();
+    // Trouver les dernières cartes publiées
+    List<Carte> findTop10ByOrderByDatePublicationDesc();
 
-    // Trouver les cartes avec beaucoup de contacts (potentiellement frauduleuses)
-    List<Carte> findByContactCountGreaterThan(int threshold);
+    // Trouver par téléphone
+    List<Carte> findByTelephoneRamasseurContaining(String telephone);
+
+    // ==== REQUÊTES PERSONNALISÉES (si besoin) ====
+
+    // Requête JPQL pour formater le téléphone
+    @Query("SELECT CASE " +
+            "WHEN c.telephoneRamasseur IS NULL OR c.telephoneRamasseur = '' THEN 'Non renseigné' " +
+            "WHEN c.telephoneRamasseur LIKE '+221%' THEN c.telephoneRamasseur " +
+            "WHEN c.telephoneRamasseur LIKE '221%' THEN CONCAT('+', c.telephoneRamasseur) " +
+            "WHEN LENGTH(c.telephoneRamasseur) = 9 THEN CONCAT('+221', c.telephoneRamasseur) " +
+            "WHEN LENGTH(c.telephoneRamasseur) = 10 AND c.telephoneRamasseur LIKE '0%' " +
+            "THEN CONCAT('+221', SUBSTRING(c.telephoneRamasseur, 2)) " +
+            "ELSE c.telephoneRamasseur END " +
+            "FROM Carte c WHERE c.id = :carteId")
+    Optional<String> findFormattedTelephone(@Param("carteId") Long carteId);
+
+    // Requête native SQL (alternative)
+    @Query(value = "SELECT " +
+            "CASE " +
+            "WHEN telephone_ramasseur IS NULL OR telephone_ramasseur = '' THEN 'Non renseigné' " +
+            "WHEN telephone_ramasseur LIKE '+221%' THEN telephone_ramasseur " +
+            "WHEN telephone_ramasseur LIKE '221%' THEN CONCAT('+', telephone_ramasseur) " +
+            "WHEN LENGTH(telephone_ramasseur) = 9 THEN CONCAT('+221', telephone_ramasseur) " +
+            "WHEN LENGTH(telephone_ramasseur) = 10 AND telephone_ramasseur LIKE '0%' " +
+            "THEN CONCAT('+221', SUBSTRING(telephone_ramasseur, 2)) " +
+            "ELSE telephone_ramasseur END " +
+            "FROM cartes WHERE id = :carteId",
+            nativeQuery = true)
+    Optional<String> findFormattedTelephoneNative(@Param("carteId") Long carteId);
 }
