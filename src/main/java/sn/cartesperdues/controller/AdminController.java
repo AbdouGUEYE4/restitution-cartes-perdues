@@ -41,6 +41,7 @@ public class AdminController {
     // ==================== AUTHENTIFICATION ====================
 
     // Page de login (GET)
+    // Page de login (GET)
     @GetMapping("/login")
     public String showLoginForm(@RequestParam(required = false) String error,
                                 @RequestParam(required = false) String logout,
@@ -62,7 +63,7 @@ public class AdminController {
         }
 
         model.addAttribute("loginDTO", new AdminLoginDTO());
-        return "admin/login";
+        return "login";  // ← ICI: "login" au lieu de "admin/login"
     }
 
     // Page d'accès refusé

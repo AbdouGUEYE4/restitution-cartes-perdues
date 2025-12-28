@@ -2,214 +2,109 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administration - Cartes Perdues</title>
-
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
-
+    <title>Connexion Admin</title>
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
         }
-
-        .login-container {
-            width: 100%;
+        .login-box {
             max-width: 400px;
-        }
-
-        .login-card {
+            margin: 100px auto;
             background: white;
-            border-radius: 15px;
             padding: 40px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
-        .logo {
+        h2 {
             text-align: center;
+            color: #333;
             margin-bottom: 30px;
         }
-
-        .logo i {
-            font-size: 3rem;
-            color: #667eea;
-            margin-bottom: 15px;
+        .form-group {
+            margin-bottom: 20px;
         }
-
-        .form-control {
-            padding: 12px 15px;
-            border-radius: 8px;
-        }
-
-        .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: 500;
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
-            transition: transform 0.3s;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
         }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
             color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
         }
-
-        .forgot-link {
-            color: #667eea;
-            text-decoration: none;
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
         }
-
-        .forgot-link:hover {
-            text-decoration: underline;
-        }
-
-        .input-group-text {
-            background-color: #f8f9fa;
-            border-right: none;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
-            border-color: #667eea;
-        }
-
-        .credentials-card {
-            background-color: #f8f9fa;
-            border-left: 4px solid #667eea;
+        .success {
+            color: #28a745;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-<div class="login-container">
-    <div class="login-card">
-        <div class="logo">
-            <i class="bi bi-shield-lock"></i>
-            <h3>Administration</h3>
-            <p class="text-muted">Cartes Perdues Sénégal</p>
-        </div>
+<div class="login-box">
+    <h2>🔐 Connexion Administrateur</h2>
 
-        <!-- Messages d'erreur -->
-        <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>Erreur de connexion !</strong><br>
-            Nom d'utilisateur ou mot de passe incorrect.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <!-- Message de déconnexion -->
-        <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show">
-            <i class="bi bi-check-circle me-2"></i>
-            <strong>Déconnexion réussie !</strong><br>
-            Vous avez été déconnecté avec succès.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <!-- Formulaire de connexion SPRING SECURITY -->
-        <!-- CORRECTION : Utiliser /login et pas /admin/login -->
-        <form th:action="@{/login}" method="post">
-            <!-- IMPORTANT : Token CSRF pour Spring Security -->
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-
-            <div class="mb-3">
-                <label class="form-label">Nom d'utilisateur</label>
-                <div class="input-group">
-                    <span class="input-group-text">
-                        <i class="bi bi-person"></i>
-                    </span>
-                    <input type="text" class="form-control" name="username"
-                           placeholder="Entrez votre nom d'utilisateur"
-                           required autofocus>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Mot de passe</label>
-                <div class="input-group">
-                    <span class="input-group-text">
-                        <i class="bi bi-lock"></i>
-                    </span>
-                    <input type="password" class="form-control" name="password"
-                           placeholder="Entrez votre mot de passe"
-                           required>
-                </div>
-            </div>
-
-            <!-- Option "Se souvenir de moi" -->
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="remember-me" name="remember-me">
-                <label class="form-check-label" for="remember-me">
-                    Se souvenir de moi
-                </label>
-            </div>
-
-            <div class="d-grid gap-2 mb-3">
-                <button type="submit" class="btn btn-login">
-                    <i class="bi bi-box-arrow-in-right"></i> Se connecter
-                </button>
-            </div>
-        </form>
-
-        <!-- Informations de connexion pour les tests -->
-        <div class="card credentials-card mt-4">
-            <div class="card-body">
-                <h6 class="card-title">
-                    <i class="bi bi-info-circle text-primary"></i> Informations de test
-                </h6>
-                <p class="card-text small text-muted mb-1">
-                    <strong>Utilisateur :</strong> admin
-                </p>
-                <p class="card-text small text-muted mb-0">
-                    <strong>Mot de passe :</strong> admin123
-                </p>
-            </div>
-        </div>
-
-        <hr class="my-4">
-
-        <div class="text-center">
-            <a th:href="@{/}" class="text-decoration-none text-primary">
-                <i class="bi bi-arrow-left"></i> Retour au site public
-            </a>
-        </div>
+    <!-- Message d'erreur -->
+    <div th:if="${param.error}" class="error">
+        ❌ Identifiant ou mot de passe incorrect
     </div>
 
-    <div class="text-center mt-4 text-white">
-        <small>
-            &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span> Cartes Perdues Sénégal<br>
-            <span class="text-white-50">Version 1.0.0 | Spring Boot 4.0.1</span>
-        </small>
+    <!-- Message de succès -->
+    <div th:if="${param.logout}" class="success">
+        ✅ Vous avez été déconnecté avec succès
+    </div>
+
+    <!-- Formulaire SIMPLE -->
+    <form method="post" action="/login">
+        <div class="form-group">
+            <input type="text"
+                   name="username"
+                   placeholder="Nom d'utilisateur"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <input type="password"
+                   name="password"
+                   placeholder="Mot de passe"
+                   required>
+        </div>
+
+        <button type="submit">Se connecter</button>
+    </form>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <small style="color: #666;">Identifiants de test:<br>
+            admin / admin123</small>
     </div>
 </div>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Auto-dismiss alerts after 5 seconds -->
 <script>
-    // Auto-dismiss alerts after 5 seconds
-    setTimeout(function() {
-        var alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            var bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        });
-    }, 5000);
-
-    // Focus sur le champ username au chargement
+    // Focus sur le champ username
     document.addEventListener('DOMContentLoaded', function() {
-        var usernameInput = document.querySelector('input[name="username"]');
-        if (usernameInput) {
-            usernameInput.focus();
-        }
+        document.getElementsByName('username')[0].focus();
     });
 </script>
 </body>

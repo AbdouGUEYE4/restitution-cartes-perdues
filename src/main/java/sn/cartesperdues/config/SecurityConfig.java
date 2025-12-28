@@ -28,39 +28,51 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // Désactiver CSRF avec une seule méthode
                 .csrf(AbstractHttpConfigurer::disable)
-                .csrf(csrf -> csrf.disable()) // Ajoutez cette ligne
+
                 .authorizeHttpRequests(authz -> authz
+                        // Pages publiques
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/debug/**", "/temp/**").permitAll()  // Pour le debug
-                        .requestMatchers("/admin/login", "/admin/logout", "/error").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers(
-                                "/signaler/**",  // Autoriser les pages de signalement
-                                "/cartes/**"
-                        ).permitAll()
-                        .anyRequest().permitAll()  // Temporairement
 
+                        // IMPORTANT: Permettre l'accès à /admin/login pour tous
+                        .requestMatchers("/admin/login", "/error").permitAll()
+
+                        // Pages admin nécessitent le rôle ADMIN
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // Pages publiques de signalement
+                        .requestMatchers("/signaler/**", "/cartes/**").permitAll()
+
+                        // Temporairement permettre tout le reste
+                        .anyRequest().permitAll()
                 )
+
                 .formLogin(form -> form
-                        .loginPage("/admin/login")
-                        .loginProcessingUrl("/admin/login")  // Doit correspondre au formulaire
+                        // Page de login (GET) - gérée par votre AdminController
+                        .loginPage("/login")
+
+                        // URL de traitement (POST) - gérée par Spring Security
+                        .loginProcessingUrl("/login")
+
                         .defaultSuccessUrl("/admin/dashboard", true)
-                        .failureUrl("/admin/login?error=true")
-                        .usernameParameter("username")  // Doit correspondre au formulaire
-                        .passwordParameter("password")  // Doit correspondre au formulaire
+                        .failureUrl("/login?error=true")
+                        .usernameParameter("username")
+                        .passwordParameter("password")
                         .successHandler(debugSuccessHandler())  // Handler de debug
                         .failureHandler(debugFailureHandler())  // Handler de debug
                         .permitAll()
-
                 )
+
                 .logout(logout -> logout
-                        .logoutUrl("/admin/logout")
-                        .logoutSuccessUrl("/admin/login?logout=true")
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout=true")
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
+
                 .exceptionHandling(exception -> exception
                         .accessDeniedPage("/admin/access-denied")
                 );
@@ -78,11 +90,20 @@ public class SecurityConfig {
                                                 org.springframework.security.core.Authentication authentication)
                     throws IOException, ServletException {
 
-                System.out.println("\n✅✅✅ CONNEXION RÉUSSIE ✅✅✅");
+                System.out.println("\n" + "=".repeat(50));
+                System.out.println("✅ CONNEXION RÉUSSIE ✅");
+                System.out.println("=".repeat(50));
                 System.out.println("Username: " + authentication.getName());
                 System.out.println("Authorities: " + authentication.getAuthorities());
                 System.out.println("Authenticated: " + authentication.isAuthenticated());
-                System.out.println("Details: " + authentication.getDetails());
+
+                // Log supplémentaire
+                if (authentication.getPrincipal() != null) {
+                    System.out.println("Principal class: " + authentication.getPrincipal().getClass().getName());
+                }
+
+                System.out.println("Redirection vers: /admin/dashboard");
+                System.out.println("=".repeat(50) + "\n");
 
                 // Continuer vers la redirection normale
                 super.onAuthenticationSuccess(request, response, authentication);
@@ -100,11 +121,21 @@ public class SecurityConfig {
                                                 org.springframework.security.core.AuthenticationException exception)
                     throws IOException, ServletException {
 
-                System.out.println("\n❌❌❌ ÉCHEC DE CONNEXION ❌❌❌");
+                System.out.println("\n" + "=".repeat(50));
+                System.out.println("❌ ÉCHEC DE CONNEXION ❌");
+                System.out.println("=".repeat(50));
                 System.out.println("Username tenté: " + request.getParameter("username"));
-                System.out.println("Exception: " + exception.getClass().getName());
+                System.out.println("Exception: " + exception.getClass().getSimpleName());
                 System.out.println("Message: " + exception.getMessage());
-                System.out.println("Cause: " + (exception.getCause() != null ? exception.getCause().getMessage() : "null"));
+
+                // Log des paramètres de la requête
+                System.out.println("\nParamètres de la requête:");
+                request.getParameterMap().forEach((key, values) -> {
+                    System.out.println("  " + key + " = " + String.join(", ", values));
+                });
+
+                System.out.println("Redirection vers: /login?error=true");
+                System.out.println("=".repeat(50) + "\n");
 
                 // Log stack trace pour debug
                 exception.printStackTrace();
