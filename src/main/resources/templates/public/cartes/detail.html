@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} + ' - Cartes Perdues'">Détails Carte - Cartes Perdues Sénégal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .carte-header {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            padding: 40px 0;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .carte-body {
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .info-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .btn-contact {
+            background: #27ae60;
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+        }
+
+        .btn-contact:hover {
+            background: #219653;
+            color: white;
+        }
+
+        .btn-signaler {
+            background: #e74c3c;
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+        }
+
+        .btn-signaler:hover {
+            background: #c0392b;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-primary" th:href="@{/}">
+            <i class="bi bi-credit-card-2-front"></i> Cartes Perdues Sénégal
+        </a>
+        <div>
+            <a th:href="@{/}" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="bi bi-house"></i> Accueil
+            </a>
+            <a th:href="@{/cartes}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-arrow-left"></i> Retour aux cartes
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Messages -->
+<div class="container mt-3">
+    <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>
+        <span th:text="${param.success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <span th:text="${param.error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${param.info}" class="alert alert-info alert-dismissible fade show">
+        <i class="bi bi-info-circle me-2"></i>
+        <span th:text="${param.info}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+
+<!-- Carte -->
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="carte-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="bi bi-credit-card me-3"></i>
+                        <span th:text="${carte.typeCarte}">CNI</span>
+                    </h1>
+                    <p class="lead mb-0" th:text="${carte.nomComplet}">Nom Complet</p>
+                </div>
+                <div class="col-md-4 text-end">
+                        <span th:switch="${carte.statut}" class="badge p-3 fs-6">
+                            <span th:case="EN_ATTENTE" class="badge bg-warning">En attente de validation</span>
+                            <span th:case="VALIDEE" class="badge bg-success">Validée - À réclamer</span>
+                            <span th:case="RESTITUEE" class="badge bg-primary">Déjà restituée</span>
+                        </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="carte-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <strong><i class="bi bi-person me-2"></i>Nom complet</strong>
+                        <div class="text-muted fs-5" th:text="${carte.nomComplet}">Nom Complet</div>
+                    </div>
+
+                    <div class="info-item">
+                        <strong><i class="bi bi-123 me-2"></i>Numéro de carte</strong>
+                        <div class="text-muted" th:text="${carte.numeroCarte != null ? carte.numeroCarte : 'Non renseigné'}">
+                            Non renseigné
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <strong><i class="bi bi-calendar me-2"></i>Date de naissance</strong>
+                        <div class="text-muted" th:if="${carte.dateNaissance}"
+                             th:text="${#temporals.format(carte.dateNaissance, 'dd/MM/yyyy')}">
+                            01/01/1990
+                        </div>
+                        <div class="text-muted" th:unless="${carte.dateNaissance}">
+                            Non renseignée
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-item">
+                        <strong><i class="bi bi-geo-alt me-2"></i>Lieu où trouvé</strong>
+                        <div class="text-muted" th:text="${carte.lieuTrouve}">Lieu</div>
+                    </div>
+
+                    <div class="info-item">
+                        <strong><i class="bi bi-calendar-event me-2"></i>Date de publication</strong>
+                        <div class="text-muted" th:text="${#temporals.format(carte.datePublication, 'dd/MM/yyyy HH:mm')}">
+                            01/01/2024 10:30
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <strong><i class="bi bi-chat-dots me-2"></i>Contacts établis</strong>
+                        <div class="text-muted">
+                            <span class="badge bg-info fs-6" th:text="${carte.contactCount}">0</span>
+                            personne(s) ont déjà contacté
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image -->
+            <div th:if="${carte.imageUrl != null and !carte.imageUrl.isEmpty()}" class="mt-4 pt-3 border-top">
+                <strong><i class="bi bi-image me-2"></i>Photo de la carte</strong>
+                <div class="mt-3 text-center">
+                    <img th:src="${carte.imageUrl}" alt="Photo de la carte"
+                         class="img-fluid rounded shadow" style="max-height: 400px;">
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-5 pt-4 border-top">
+                <div class="row">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <h5 class="mb-3"><i class="bi bi-telephone text-success me-2"></i>Pour récupérer cette carte :</h5>
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading">Contactez directement le ramasseur :</h6>
+                            <div class="d-flex align-items-center mt-2">
+                                <i class="bi bi-telephone fs-4 me-3"></i>
+                                <div>
+                                    <a th:href="'tel:' + ${carte.telephoneRamasseur}"
+                                       class="fs-4 text-decoration-none fw-bold"
+                                       th:text="${carte.telephoneRamasseur}">
+                                        0123456789
+                                    </a>
+                                    <p class="mb-0 small">Appelez ce numéro pour prendre rendez-vous</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h5 class="mb-3"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Signaler un problème</h5>
+                        <div class="alert alert-warning">
+                            <p class="mb-2">Si cette carte vous appartient ou si vous constatez un problème :</p>
+                            <ul class="mb-0">
+                                <li>Informations incorrectes</li>
+                                <li>Carte déjà récupérée</li>
+                                <li>Publication frauduleuse</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-center gap-4 mt-4">
+                    <a th:href="'tel:' + ${carte.telephoneRamasseur}"
+                       class="btn btn-contact btn-lg">
+                        <i class="bi bi-telephone me-2"></i> Appeler maintenant
+                    </a>
+
+                    <a th:href="@{/signaler/carte/{id}(id=${carte.id})}"
+                       class="btn btn-signaler btn-lg">
+                        <i class="bi bi-flag me-2"></i> Signaler cette carte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conseils -->
+    <div class="alert alert-info">
+        <h6><i class="bi bi-lightbulb me-2"></i>Conseils de sécurité :</h6>
+        <ul class="mb-0">
+            <li>Vérifiez bien l'identité de la personne avant de récupérer la carte</li>
+            <li>Privilégiez les rencontres dans des lieux publics et sécurisés</li>
+            <li>Ne communiquez pas d'informations personnelles sensibles</li>
+            <li>Signalez tout comportement suspect</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+        <div class="text-center">
+            <small>&copy; 2024 Cartes Perdues Sénégal. Service citoyen gratuit.</small>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} + ' - Cartes Perdues'">Rechercher une carte - Cartes Perdues Sénégal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .search-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .carte-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .carte-item:hover {
+            background: #f8f9fa;
+            border-color: #3498db;
+        }
+
+        .statut-badge {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-primary" th:href="@{/}">
+            <i class="bi bi-credit-card-2-front"></i> Cartes Perdues Sénégal
+        </a>
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+                <a class="nav-link" th:href="@{/}">Accueil</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" th:href="@{/cartes}">Rechercher</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:href="@{/publier}">Publier</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Contenu -->
+<div class="container py-5">
+    <h1 class="mb-4">
+        <i class="bi bi-search text-primary me-2"></i>
+        <span th:text="${pageTitle}">Rechercher une carte</span>
+    </h1>
+
+    <!-- Formulaire de recherche -->
+    <div class="search-card">
+        <form th:action="@{/cartes}" method="get" class="row g-3">
+            <div class="col-md-5">
+                <label for="search" class="form-label">Recherche par nom</label>
+                <input type="text" class="form-control" id="search" name="search"
+                       th:value="${searchQuery}" placeholder="Nom de la personne...">
+            </div>
+
+            <div class="col-md-3">
+                <label for="type" class="form-label">Type de carte</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">Tous types</option>
+                    <option value="CNI">CNI</option>
+                    <option value="Permis">Permis de conduire</option>
+                    <option value="Carte scolaire">Carte scolaire</option>
+                    <option value="Badge">Badge</option>
+                    <option value="Autre">Autre</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="statut" class="form-label">Statut</label>
+                <select class="form-select" id="statut" name="statut">
+                    <option value="">Tous statuts</option>
+                    <option value="EN_ATTENTE">En attente</option>
+                    <option value="VALIDEE">Validée</option>
+                    <option value="RESTITUEE">Restituée</option>
+                </select>
+            </div>
+
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Résultats -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 th:text="'Résultats : ' + ${cartes.size()} + ' carte(s) trouvée(s)'">
+                    Résultats : 0 carte(s) trouvée(s)
+                </h5>
+
+                <th:block th:if="${searchQuery}">
+                    <a th:href="@{/cartes}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle me-1"></i> Effacer la recherche
+                    </a>
+                </th:block>
+            </div>
+
+            <!-- Liste des cartes -->
+            <div th:if="${cartes.empty}" class="text-center py-5">
+                <div class="mb-3">
+                    <i class="bi bi-search display-1 text-muted"></i>
+                </div>
+                <h4 class="text-muted">Aucune carte trouvée</h4>
+                <p th:if="${searchQuery}">Essayez avec d'autres critères de recherche.</p>
+                <p th:unless="${searchQuery}">
+                    <a th:href="@{/publier}" class="btn btn-primary mt-2">
+                        <i class="bi bi-plus-circle me-2"></i> Publier la première carte
+                    </a>
+                </p>
+            </div>
+
+            <!-- Cartes -->
+            <div th:each="carte : ${cartes}" class="carte-item">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-2">
+                            <h5 class="mb-0 me-3" th:text="${carte.nomComplet}">Nom Complet</h5>
+                            <span th:switch="${carte.statut}" class="statut-badge">
+                                    <span th:case="EN_ATTENTE" class="badge bg-warning">En attente</span>
+                                    <span th:case="VALIDEE" class="badge bg-success">Validée</span>
+                                    <span th:case="RESTITUEE" class="badge bg-primary">Restituée</span>
+                                </span>
+                        </div>
+
+                        <div class="row text-muted small">
+                            <div class="col-md-4">
+                                <i class="bi bi-credit-card me-1"></i>
+                                <span th:text="${carte.typeCarte}">CNI</span>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                <span th:text="${carte.lieuTrouve}">Lieu</span>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="bi bi-calendar me-1"></i>
+                                <span th:text="${#temporals.format(carte.datePublication, 'dd/MM/yyyy')}">
+                                        01/01/2024
+                                    </span>
+                            </div>
+                        </div>
+
+                        <div class="mt-2">
+                                <span class="badge bg-info">
+                                    <i class="bi bi-telephone me-1"></i>
+                                    Contacté <span th:text="${carte.contactCount}">0</span> fois
+                                </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 text-end">
+                        <a th:href="@{/cartes/{id}(id=${carte.id})}" class="btn btn-primary me-2">
+                            <i class="bi bi-eye me-1"></i> Voir détails
+                        </a>
+                        <a th:href="@{/signaler/carte/{id}(id=${carte.id})}"
+                           class="btn btn-outline-danger">
+                            <i class="bi bi-flag me-1"></i> Signaler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+        <div class="text-center">
+            <small>&copy; 2024 Cartes Perdues Sénégal. Plateforme citoyenne.</small>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

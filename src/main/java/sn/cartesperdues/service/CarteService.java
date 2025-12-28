@@ -7,9 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +27,49 @@ public class CarteService {
     public Carte findCarteById(Long id) {
         return carteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Carte non trouvée avec ID: " + id));
+    }
+
+    public List<Carte> rechercherCarteSecurise(String numeroCarte, String nomComplet, LocalDate dateNaissance) {
+        System.out.println("=== RECHERCHE SÉCURISÉE SERVICE ===");
+
+        // Recherche par numéro de carte (le plus précis)
+        if (numeroCarte != null && !numeroCarte.trim().isEmpty()) {
+            String numeroClean = numeroCarte.trim().replaceAll("\\s", "");
+            List<Carte> resultats = carteRepository.findByNumeroCarteContaining(numeroClean);
+
+            // Si date de naissance fournie, filtrer
+            if (dateNaissance != null && !resultats.isEmpty()) {
+                resultats = resultats.stream()
+                        .filter(c -> c.getDateNaissance() != null && c.getDateNaissance().equals(dateNaissance))
+                        .collect(Collectors.toList());
+            }
+
+            return resultats;
+        }
+
+        // Recherche par nom complet (avec date de naissance obligatoire pour plus de sécurité)
+        if (nomComplet != null && !nomComplet.trim().isEmpty()) {
+            if (dateNaissance == null) {
+                throw new IllegalArgumentException("La date de naissance est requise pour une recherche par nom.");
+            }
+
+            // Recherche approximative du nom
+            String nomClean = nomComplet.trim().toLowerCase();
+            List<Carte> toutesCartes = carteRepository.findAll();
+
+            // Filtrer par nom (contient, insensible à la casse) ET date de naissance
+            return toutesCartes.stream()
+                    .filter(c -> {
+                        boolean nomMatch = c.getNomComplet() != null &&
+                                c.getNomComplet().toLowerCase().contains(nomClean);
+                        boolean dateMatch = c.getDateNaissance() != null &&
+                                c.getDateNaissance().equals(dateNaissance);
+                        return nomMatch && dateMatch;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        return Collections.emptyList();
     }
 
     // Autres méthodes
@@ -107,11 +149,44 @@ public class CarteService {
     }
 
     public List<Carte> rechercherCartes(String search, String type, String statut) {
-        // Implémentation basique - à améliorer
-        if (search != null && !search.trim().isEmpty()) {
-            return carteRepository.findByNomCompletContainingIgnoreCase(search);
+        System.out.println("=== SERVICE RECHERCHE ===");
+        System.out.println("Recherche: " + search);
+        System.out.println("Type: " + type);
+        System.out.println("Statut: " + statut);
+
+        List<Carte> resultats = new ArrayList<>();
+
+        // Si aucun paramètre, retourner toutes les cartes
+        if ((search == null || search.trim().isEmpty())
+                && (type == null || type.trim().isEmpty())
+                && (statut == null || statut.trim().isEmpty())) {
+
+            resultats = carteRepository.findAll();
+            System.out.println("Aucun filtre - retourne toutes les cartes: " + resultats.size());
         }
-        return carteRepository.findAll();
+        // Recherche par mot-clé
+        else if (search != null && !search.trim().isEmpty()) {
+            resultats = carteRepository.findByNomCompletContainingIgnoreCase(search);
+            System.out.println("Recherche par nom: " + resultats.size() + " résultats");
+        }
+        // Recherche par type
+        else if (type != null && !type.trim().isEmpty()) {
+            resultats = carteRepository.findByTypeCarte(type);
+            System.out.println("Recherche par type: " + resultats.size() + " résultats");
+        }
+        // Recherche par statut
+        else if (statut != null && !statut.trim().isEmpty()) {
+            try {
+                StatutCarte statutEnum = StatutCarte.valueOf(statut);
+                resultats = carteRepository.findByStatut(statutEnum);
+                System.out.println("Recherche par statut: " + resultats.size() + " résultats");
+            } catch (Exception e) {
+                System.out.println("Statut invalide: " + statut);
+                resultats = carteRepository.findAll();
+            }
+        }
+
+        return resultats;
     }
 
     public Carte publierCarte(Carte carte, Object o) {
@@ -166,5 +241,8 @@ public class CarteService {
         List<Carte> cartes = getAllCartes();
         return cartes.stream()
                 .collect(Collectors.groupingBy(Carte::getTypeCarte, Collectors.counting()));
+    }
+    public Carte saveCarte(Carte carte) {
+        return carteRepository.save(carte);
     }
 }

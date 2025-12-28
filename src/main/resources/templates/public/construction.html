@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publier une carte trouvée - Cartes Perdues Sénégal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            padding-bottom: 50px;
+        }
+
+        .form-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .form-icon {
+            font-size: 3.5rem;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 4px solid #3498db;
+        }
+
+        .section-title {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 10px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 12px 40px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-cancel {
+            background: #95a5a6;
+            color: white;
+            padding: 12px 40px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel:hover {
+            background: #7f8c8d;
+            color: white;
+        }
+
+        .required-star {
+            color: #e74c3c;
+        }
+
+        .help-text {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .info-alert {
+            border-left: 4px solid #3498db;
+        }
+
+        .warning-alert {
+            border-left: 4px solid #f39c12;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-light bg-white shadow-sm mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-primary" th:href="@{/}">
+            <i class="bi bi-credit-card-2-front"></i> Cartes Perdues Sénégal
+        </a>
+        <div>
+            <a th:href="@{/}" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="bi bi-house"></i> Accueil
+            </a>
+            <a th:href="@{/cartes}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-search"></i> Rechercher
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Formulaire -->
+<div class="container">
+    <div class="form-container">
+        <!-- En-tête -->
+        <div class="form-header">
+            <div class="form-icon">
+                <i class="bi bi-plus-circle"></i>
+            </div>
+            <h1>Publier une carte trouvée</h1>
+            <p class="text-muted">
+                Remplissez ce formulaire pour aider à restituer une carte perdue
+            </p>
+        </div>
+
+        <!-- Messages -->
+        <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>
+            <span th:text="${param.success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span th:text="${param.error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Informations importantes -->
+        <div class="alert alert-info info-alert mb-4">
+            <h6><i class="bi bi-info-circle me-2"></i>Informations importantes</h6>
+            <ul class="mb-0">
+                <li>Les champs marqués d'un <span class="required-star">*</span> sont obligatoires</li>
+                <li>Toutes les publications sont vérifiées avant validation</li>
+                <li>Votre numéro de téléphone sera visible pour permettre la restitution</li>
+                <li>Ne publiez pas de fausses informations</li>
+            </ul>
+        </div>
+
+        <!-- Formulaire -->
+        <form th:action="@{/publier}" method="post" th:object="${carte}" enctype="multipart/form-data">
+            <!-- Section 1 : Informations sur la carte -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-credit-card"></i> Informations sur la carte
+                </h4>
+
+                <div class="row">
+                    <!-- Type de carte -->
+                    <div class="col-md-6 mb-3">
+                        <label for="typeCarte" class="form-label">
+                            Type de carte <span class="required-star">*</span>
+                        </label>
+                        <select class="form-select" id="typeCarte" th:field="*{typeCarte}" required>
+                            <option value="">Sélectionnez le type</option>
+                            <option value="CNI">Carte Nationale d'Identité (CNI)</option>
+                            <option value="Permis">Permis de conduire</option>
+                            <option value="Carte scolaire">Carte scolaire/étudiant</option>
+                            <option value="Badge">Badge professionnel</option>
+                            <option value="Carte bancaire">Carte bancaire</option>
+                            <option value="Carte de santé">Carte de santé/mutuelle</option>
+                            <option value="Autre">Autre type de carte</option>
+                        </select>
+                        <div class="help-text">Sélectionnez le type de document trouvé</div>
+                    </div>
+
+                    <!-- Numéro de carte (facultatif) -->
+                    <div class="col-md-6 mb-3">
+                        <label for="numeroCarte" class="form-label">Numéro de carte</label>
+                        <input type="text" class="form-control" id="numeroCarte"
+                               th:field="*{numeroCarte}" placeholder="Ex: 1234567890">
+                        <div class="help-text">Si visible sur la carte (facultatif)</div>
+                    </div>
+                </div>
+
+                <!-- Nom complet -->
+                <div class="mb-3">
+                    <label for="nomComplet" class="form-label">
+                        Nom complet <span class="required-star">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="nomComplet"
+                           th:field="*{nomComplet}"
+                           placeholder="Ex: Mamadou Diop" required>
+                    <div class="help-text">Le nom tel qu'il apparaît sur la carte</div>
+                </div>
+
+                <!-- Date de naissance (facultatif) -->
+                <div class="mb-3">
+                    <label for="dateNaissance" class="form-label">Date de naissance</label>
+                    <input type="date" class="form-control" id="dateNaissance"
+                           th:field="*{dateNaissance}">
+                    <div class="help-text">Si visible sur la carte (facultatif)</div>
+                </div>
+            </div>
+
+            <!-- Section 2 : Informations de découverte -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-geo-alt"></i> Lieu de découverte
+                </h4>
+
+                <!-- Lieu trouvé -->
+                <div class="mb-3">
+                    <label for="lieuTrouve" class="form-label">
+                        Lieu où vous avez trouvé la carte <span class="required-star">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="lieuTrouve"
+                           th:field="*{lieuTrouve}"
+                           placeholder="Ex: Rue 10, Dakar Plateau ou Taxi, Arrêt Liberté..." required>
+                    <div class="help-text">Décrivez l'endroit précis où vous avez trouvé la carte</div>
+                </div>
+            </div> <!-- ← BALISE DE FERMETURE AJOUTÉE -->
+
+            <!-- Section 3 : Vos coordonnées -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-person-badge"></i> Vos coordonnées
+                </h4>
+
+                <!-- Téléphone du ramasseur -->
+                <div class="mb-3">
+                    <label for="telephoneRamasseur" class="form-label">
+                        Votre numéro de téléphone <span class="required-star">*</span>
+                    </label>
+                    <input type="tel" class="form-control" id="telephoneRamasseur"
+                           th:field="*{telephoneRamasseur}"
+                           placeholder="Ex: 77 123 45 67" pattern="[0-9]{9}" required>
+                    <div class="help-text">Ce numéro sera visible pour permettre au propriétaire de vous contacter</div>
+                </div>
+
+                <div class="alert alert-warning warning-alert">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Important</h6>
+                    <p class="mb-0">
+                        Votre numéro de téléphone sera public. Assurez-vous de pouvoir être joint
+                        pour restituer la carte. Ne communiquez pas d'autres informations personnelles.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 4 : Photo de la carte -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-camera"></i> Photo de la carte (facultatif)
+                </h4>
+
+                <div class="mb-3">
+                    <label for="imageFile" class="form-label">Photo de la carte</label>
+                    <input type="file" class="form-control" id="imageFile"
+                           name="imageFile" accept="image/*">
+                    <div class="help-text">
+                        Vous pouvez uploader une photo de la carte (max 5MB). Formats acceptés : JPG, PNG, JPEG.
+                        <br><strong>Conseil :</strong> Masquez les informations sensibles avant de prendre la photo.
+                    </div>
+                </div>
+
+                <!-- Aperçu de l'image -->
+                <div id="imagePreview" class="text-center mt-3" style="display: none;">
+                    <img id="previewImage" src="#" alt="Aperçu de l'image"
+                         class="img-fluid rounded" style="max-height: 200px;">
+                    <button type="button" class="btn btn-sm btn-outline-danger mt-2"
+                            onclick="removeImage()">
+                        <i class="bi bi-trash"></i> Supprimer l'image
+                    </button>
+                </div>
+
+                <!-- URL alternative pour l'image -->
+                <div class="mt-3">
+                    <label for="imageUrl" class="form-label">Ou lien vers l'image</label>
+                    <input type="url" class="form-control" id="imageUrl"
+                           th:field="*{imageUrl}"
+                           placeholder="https://exemple.com/image.jpg">
+                    <div class="help-text">Si vous avez déjà uploadé l'image ailleurs</div>
+                </div>
+            </div>
+
+            <!-- Section 5 : Conditions -->
+            <div class="form-section">
+                <h4 class="section-title">
+                    <i class="bi bi-shield-check"></i> Conditions d'utilisation
+                </h4>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="condition1" required>
+                    <label class="form-check-label" for="condition1">
+                        Je certifie que les informations fournies sont exactes et véridiques
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="condition2" required>
+                    <label class="form-check-label" for="condition2">
+                        Je m'engage à restituer la carte à son propriétaire légitime
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="condition3" required>
+                    <label class="form-check-label" for="condition3">
+                        J'accepte que mon numéro de téléphone soit visible publiquement
+                    </label>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb me-2"></i>Bon à savoir</h6>
+                    <ul class="mb-0">
+                        <li>La publication sera vérifiée par notre équipe sous 24h</li>
+                        <li>Vous recevrez une notification quand la carte sera réclamée</li>
+                        <li>La carte sera automatiquement archivée après 30 jours</li>
+                        <li>Vous pouvez supprimer votre publication à tout moment</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="d-flex justify-content-between mt-5">
+                <a th:href="@{/}" class="btn btn-cancel">
+                    <i class="bi bi-x-circle me-2"></i> Annuler
+                </a>
+
+                <button type="submit" class="btn btn-submit">
+                    <i class="bi bi-send me-2"></i> Publier la carte
+                </button>
+            </div>
+
+            <input type="hidden" th:if="${_csrf != null}"
+                   th:name="${_csrf.parameterName}"
+                   th:value="${_csrf.token}" />
+        </form>
+
+        <!-- Footer du formulaire -->
+        <div class="text-center text-muted mt-4 pt-4 border-top">
+            <small>
+                <i class="bi bi-info-circle me-1"></i>
+                En publiant cette carte, vous contribuez à une initiative citoyenne de solidarité.
+                Merci pour votre aide !
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+        <div class="text-center">
+            <small>&copy; 2024 Cartes Perdues Sénégal. Service citoyen gratuit.</small>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Prévisualisation de l'image
+    document.getElementById('imageFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('imagePreview').style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Supprimer l'image
+    function removeImage() {
+        document.getElementById('imageFile').value = '';
+        document.getElementById('imagePreview').style.display = 'none';
+    }
+
+    // Validation SIMPLIFIÉE du formulaire
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const telephone = document.getElementById('telephoneRamasseur').value;
+        const telephoneNettoye = telephone.replace(/\s/g, '');
+
+        // Validation basique du téléphone
+        if (!/^[0-9]{9}$/.test(telephoneNettoye)) {
+            e.preventDefault();
+            alert('Veuillez entrer un numéro de téléphone valide (9 chiffres).\nExemple: 771234567');
+            return false;
+        }
+
+        // Validation des conditions
+        const condition1 = document.getElementById('condition1');
+        const condition2 = document.getElementById('condition2');
+        const condition3 = document.getElementById('condition3');
+
+        if (condition1 && condition2 && condition3) {
+            if (!condition1.checked || !condition2.checked || !condition3.checked) {
+                e.preventDefault();
+                alert('Veuillez accepter toutes les conditions d\'utilisation.');
+                return false;
+            }
+        }
+
+        // Nettoyer le téléphone avant envoi
+        document.getElementById('telephoneRamasseur').value = telephoneNettoye;
+
+        // Confirmation
+        if (!confirm('Êtes-vous sûr de vouloir publier cette carte ?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+</script>
+</body>
+</html>

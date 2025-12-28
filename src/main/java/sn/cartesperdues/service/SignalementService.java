@@ -1,6 +1,7 @@
 package sn.cartesperdues.service;
 
 import org.jspecify.annotations.Nullable;
+import sn.cartesperdues.dto.SignalementDTO;
 import sn.cartesperdues.entity.Carte;
 import sn.cartesperdues.entity.Signalement;
 import sn.cartesperdues.entity.StatutSignalement;
@@ -105,5 +106,19 @@ public class SignalementService {
                         Signalement::getRaison,
                         Collectors.counting()
                 ));
+    }
+
+    // Dans SignalementService
+    public void creerSignalement(SignalementDTO signalementDTO) {
+        Carte carte = carteService.findCarteById(signalementDTO.getCarteId());
+
+        Signalement signalement = new Signalement();
+        signalement.setCarte(carte);
+        signalement.setRaison(signalementDTO.getRaison());
+        signalement.setDescription(signalementDTO.getDescription());
+        signalement.setEmailSignaleur(signalementDTO.getEmailSignaleur());
+        signalement.setStatut(StatutSignalement.NOUVEAU);
+
+        signalementRepository.save(signalement);
     }
 }

@@ -1,20 +1,22 @@
 package sn.cartesperdues.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
 public class SignalementDTO {
 
-    @NotNull(message = "L'ID de la carte est requis")
     private Long carteId;
 
-    @NotBlank(message = "La raison du signalement est obligatoire")
+    @NotBlank(message = "Veuillez sélectionner une raison")
     private String raison;
 
     @NotBlank(message = "La description est obligatoire")
+    @Size(min = 10, message = "La description doit contenir au moins 10 caractères")
     private String description;
 
-    private String emailSignaleur; // Optionnel
+    @Email(message = "Veuillez entrer un email valide")
+    private String emailSignaleur;
 }

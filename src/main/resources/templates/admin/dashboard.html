@@ -45,7 +45,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/admin/cartes}">
+                        <a class="nav-link" th:href="@{/admin/cartes/list}">
                             <i class="bi bi-credit-card"></i> Cartes
                         </a>
                     </li>
@@ -55,8 +55,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/admin/administrateurs}">
-                            <i class="bi bi-people"></i> Administrateurs
+                        <a class="nav-link" th:href="@{/admin/utilisateurs}">
+                            <i class="bi bi-people"></i> Utilisateurs
                         </a>
                     </li>
                     <li class="nav-item">
@@ -71,7 +71,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-danger" th:href="@{/admin/logout}">
+                        <a class="nav-link text-danger" th:href="@{/logout}">
                             <i class="bi bi-box-arrow-right"></i> Déconnexion
                         </a>
                     </li>
@@ -88,10 +88,10 @@
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </h4>
                     <div>
-                            <span class="text-muted me-3">
-                                <i class="bi bi-person-circle"></i>
-                                <span th:text="${adminName}">Admin</span>
-                            </span>
+                        <span class="text-muted me-3">
+                            <i class="bi bi-person-circle"></i>
+                            <span th:text="${adminName != null ? adminName : 'Administrateur'}">Admin</span>
+                        </span>
                         <a th:href="@{/}" class="btn btn-outline-primary btn-sm" target="_blank">
                             <i class="bi bi-eye"></i> Voir le site
                         </a>
@@ -107,7 +107,7 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <h6 class="text-muted">Cartes en attente</h6>
-                                    <h2 th:text="${stats.cartesEnAttente}">0</h2>
+                                    <h2 th:text="${stats != null ? stats.cartesEnAttente : 0}">0</h2>
                                 </div>
                                 <div class="align-self-center">
                                     <i class="bi bi-hourglass-split display-6 text-primary"></i>
@@ -122,7 +122,7 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <h6 class="text-muted">Cartes validées</h6>
-                                    <h2 th:text="${stats.cartesValidees}">0</h2>
+                                    <h2 th:text="${stats != null ? stats.cartesValidees : 0}">0</h2>
                                 </div>
                                 <div class="align-self-center">
                                     <i class="bi bi-check-circle display-6 text-success"></i>
@@ -137,7 +137,7 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <h6 class="text-muted">Cartes restituées</h6>
-                                    <h2 th:text="${stats.cartesRestituees}">0</h2>
+                                    <h2 th:text="${stats != null ? stats.cartesRestituees : 0}">0</h2>
                                 </div>
                                 <div class="align-self-center">
                                     <i class="bi bi-gift display-6 text-info"></i>
@@ -151,11 +151,11 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <h6 class="text-muted">Nouveaux signalements</h6>
-                                    <h2 th:text="${stats.nouveauxSignalements}">0</h2>
+                                    <h6 class="text-muted">Total cartes</h6>
+                                    <h2 th:text="${stats != null ? stats.totalCartes : 0}">0</h2>
                                 </div>
                                 <div class="align-self-center">
-                                    <i class="bi bi-flag display-6 text-warning"></i>
+                                    <i class="bi bi-credit-card display-6 text-warning"></i>
                                 </div>
                             </div>
                         </div>
@@ -173,20 +173,42 @@
                             </h6>
                         </div>
                         <div class="card-body">
-                            <div th:if="${cartesEnAttente.empty}" class="text-center py-4">
+                            <div th:if="${cartesEnAttente == null || cartesEnAttente.empty}" class="text-center py-4">
                                 <i class="bi bi-check-circle display-4 text-success"></i>
                                 <p class="mt-3 text-muted">Aucune carte en attente de validation</p>
                             </div>
                             <div th:each="carte : ${cartesEnAttente}" class="border-bottom pb-2 mb-2">
-                                <h6 th:text="${carte.nomProprietaire}">Nom</h6>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i>
-                                    <span th:text="${#dates.format(carte.datePublication, 'dd/MM/yyyy')}">Date</span>
+                                <!-- CORRECTION ICI : utiliser nomComplet au lieu de nomProprietaire -->
+                                <h6 th:text="${carte.nomComplet}">Nom Complet</h6>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-credit-card"></i>
+                                    <span th:text="${carte.typeCarte}">Type</span>
+                                    <span th:if="${carte.numeroCarte != null && carte.numeroCarte != ''}">
+                                        - N° <span th:text="${carte.numeroCarte}"></span>
+                                    </span>
                                 </small>
-                                <a th:href="@{/admin/cartes/{id}(id=${carte.id})}"
-                                   class="btn btn-sm btn-outline-primary float-end">
-                                    Voir
-                                </a>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-calendar"></i>
+                                    <span th:text="${#temporals.format(carte.datePublication, 'dd/MM/yyyy HH:mm')}">Date</span>
+                                    |
+                                    <i class="bi bi-geo-alt"></i>
+                                    <span th:text="${carte.lieuTrouve}">Lieu</span>
+                                </small>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-telephone"></i>
+                                    <span th:text="${carte.telephoneRamasseur}">Téléphone</span>
+                                </small>
+                                <div class="mt-2">
+                                    <span class="badge" th:classappend="${carte.statut == 'EN_ATTENTE' ? 'bg-warning' :
+                                                                        carte.statut == 'VALIDE' ? 'bg-success' :
+                                                                        carte.statut == 'RESTITUE' ? 'bg-info' : 'bg-secondary'}">
+                                        <span th:text="${carte.statut}">Statut</span>
+                                    </span>
+                                    <a th:href="@{/admin/cartes/{id}(id=${carte.id})}"
+                                       class="btn btn-sm btn-outline-primary float-end">
+                                        <i class="bi bi-eye"></i> Voir
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -195,24 +217,35 @@
                     <div class="card">
                         <div class="card-header">
                             <h6 class="mb-0">
-                                <i class="bi bi-flag"></i> Nouveaux signalements
+                                <i class="bi bi-activity"></i> Cartes récemment validées
                             </h6>
                         </div>
                         <div class="card-body">
-                            <div th:if="${nouveauxSignalements.empty}" class="text-center py-4">
-                                <i class="bi bi-check-circle display-4 text-success"></i>
-                                <p class="mt-3 text-muted">Aucun nouveau signalement</p>
+                            <div th:if="${cartesRecentes == null || cartesRecentes.empty}" class="text-center py-4">
+                                <i class="bi bi-credit-card display-4 text-muted"></i>
+                                <p class="mt-3 text-muted">Aucune carte récente</p>
                             </div>
-                            <div th:each="signalement : ${nouveauxSignalements}" class="border-bottom pb-2 mb-2">
-                                <h6 th:text="${signalement.sujet}">Sujet</h6>
-                                <small class="text-muted">
-                                    <i class="bi bi-person"></i>
-                                    <span th:text="${signalement.nomSignaleur}">Nom</span>
+                            <div th:each="carte : ${cartesRecentes}" class="border-bottom pb-2 mb-2">
+                                <h6 th:text="${carte.nomComplet}">Nom Complet</h6>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-credit-card"></i>
+                                    <span th:text="${carte.typeCarte}">Type</span>
                                 </small>
-                                <a th:href="@{/admin/signalements/{id}(id=${signalement.id})}"
-                                   class="btn btn-sm btn-outline-warning float-end">
-                                    Traiter
-                                </a>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-calendar"></i>
+                                    <span th:text="${#temporals.format(carte.datePublication, 'dd/MM/yyyy HH:mm')}">Date</span>
+                                </small>
+                                <div class="mt-2">
+                                    <span class="badge" th:classappend="${carte.statut == 'EN_ATTENTE' ? 'bg-warning' :
+                                                                        carte.statut == 'VALIDE' ? 'bg-success' :
+                                                                        carte.statut == 'RESTITUE' ? 'bg-info' : 'bg-secondary'}">
+                                        <span th:text="${carte.statut}">Statut</span>
+                                    </span>
+                                    <a th:href="@{/admin/cartes/{id}(id=${carte.id})}"
+                                       class="btn btn-sm btn-outline-primary float-end">
+                                        <i class="bi bi-eye"></i> Voir
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -223,7 +256,7 @@
             <footer class="mt-5 pt-3 border-top">
                 <div class="text-center text-muted">
                     <small>
-                        &copy; 2024 Cartes Perdues Sénégal - Panel d'administration
+                        &copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span> Cartes Perdues Sénégal - Panel d'administration
                         <br>
                         <span class="text-muted">Spring Boot 4.0.1 | Java 21</span>
                     </small>

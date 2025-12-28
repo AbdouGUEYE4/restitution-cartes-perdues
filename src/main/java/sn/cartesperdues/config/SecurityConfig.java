@@ -29,6 +29,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.disable()) // Ajoutez cette ligne
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/debug/**", "/temp/**").permitAll()  // Pour le debug
@@ -51,6 +52,7 @@ public class SecurityConfig {
                         .successHandler(debugSuccessHandler())  // Handler de debug
                         .failureHandler(debugFailureHandler())  // Handler de debug
                         .permitAll()
+
                 )
                 .logout(logout -> logout
                         .logoutUrl("/admin/logout")
